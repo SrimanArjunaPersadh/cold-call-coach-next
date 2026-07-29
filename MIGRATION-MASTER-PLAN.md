@@ -93,7 +93,7 @@ Adjudicated 2026-07-29. This table is closed. Nothing may be added to it.
 | Feature | Refinement |
 |---|---|
 | Scorecard display | Adopt Kindo's `category → criteria → score → evidence` layout. §5. |
-| Kanban terminal stage(s) | Collapse `not_interested` (and any future terminal stage) into a count-chip / collapsed rail, expand on tap: `Not interested (12)`. Reclaims a full column for the five live stages. Layout only. |
+| Kanban terminal stage(s) | ~~Collapse `not_interested` into a count-chip / collapsed rail, expand on tap.~~ **REVERSED 2026-07-29 during Phase 4 — see §7.** All six stages are full columns; the board takes the full viewport instead of the shell's 1152px measure, and that is what reclaims the room. Layout only, either way. |
 | Score trend | Gated at 5 scored calls (default ruling, §0). |
 | Talk metric label | `Talk share — X% of spoken time` (already fixed in old app; carry forward). |
 
@@ -266,16 +266,43 @@ computeMetrics(turns: DiarisedTurn[], repSpeaker: number): {
 
 ## 7. KANBAN SPEC
 
-- **Five live columns** at full width: the existing stages minus terminals.
-- **Terminal rail:** `not_interested` (and any future terminal stage) collapses
-  to a count-chip rail — `Not interested (12)` — expanding on tap to a simple
-  list (no full column). Leads remain draggable into it; drag-over highlights
-  the chip. Data model untouched: same stage values, same rows.
+> **AMENDED 2026-07-29, during Phase 4, by the owner.** This section originally
+> specified five live columns plus a collapsed count-chip rail for
+> `not_interested`. The rail was built, reviewed on screen, and rejected: every
+> CRM the owner actually uses — HubSpot, Pipedrive, GoHighLevel — shows its
+> lost/dead stage as a permanent full column, and the rail was the one place
+> this board asked its owner to learn a control their existing tools do not
+> have. **All six stages are full columns.** The width that pays for the sixth
+> came out of the same review and is now a rule of its own, below. The rail's
+> implementation — a `terminal` flag, `partitionStages`, the collapsed drop
+> zone, the remembered open/closed state — was **deleted, not disabled**, so
+> nothing carries machinery for a mode that no longer exists. Superseded text is
+> struck through. The idea is captured in §12 in case the stage list ever grows.
+
+- **Six columns**, one per stage, in this order: `new · no_answer · callback ·
+  interested · booked · not_interested`. ~~Five live columns at full width; the
+  terminal stage collapses to a count-chip rail — `Not interested (12)` —
+  expanding on tap to a simple list, not a full column.~~ Data model untouched
+  either way: same stage values, same rows, and `/api/leads` is unaware of how
+  the board lays them out.
+- **Board width — the kanban does NOT take the app shell's measure.** It is a
+  datagrid and spans the full viewport; Coach and Dashboard keep the 1152px cap
+  because they are reading surfaces and prose wants a measure. This is not
+  cosmetic: six columns need more width than the shell has, so a capped
+  container silently hid two of them, which is exactly what the rail had been
+  invented to avoid. Above 1280px the columns flex to fill the viewport; below
+  it they hold 272px and the row scrolls horizontally — which is what edge
+  autoscroll is for.
 - Drag-drop: optimistic move, edge autoscroll on mobile, failed persist rolls
   back position AND stage visibly + error toast (behaviour identical to old
-  app's verified offline handling).
+  app's verified offline handling). **Pointer events, never HTML5 drag-and-drop**
+  — native DnD failed on link-bearing cards, could not autoscroll the
+  overflowing board, and never fires on touch.
 - Card face: business name, phone, maps rating, website link
-  (`stopPropagation` behaviour preserved). Nothing else.
+  (`stopPropagation` behaviour preserved). Nothing else. The maps rating is the
+  **number** (tabular-nums, one decimal, no chip when null), where the old card
+  carried a Maps *link*. The old card's "No website" flag, industry chip, notes
+  flag and Call button are all cut; the Call button is Phase 5, not hidden.
 - Empty column state: `Drop leads here`.
 - Deferred (§12): stale-indicator on cards + never-called sort/filter.
 
@@ -376,10 +403,11 @@ stays live throughout. Do not start a phase until the previous one is merged.
       layout) → speaker swap → debounced persist. **Verify:** one real 30s+
       recording end-to-end on the phone; swap recomputes all three metrics and
       persists; four states (mic denied = error state).
-- [ ] **Phase 4 — CRM kanban.** Five live columns + terminal rail (§7),
-      drag-drop + autoscroll, lead modal. **Verify:** phone drag with
-      autoscroll; airplane-mode drag rolls back + toasts; rail expand/collapse;
-      empty column state.
+- [ ] **Phase 4 — CRM kanban.** Six stage columns (§7 as amended), drag-drop +
+      autoscroll, lead modal. **Verify:** phone drag with autoscroll;
+      airplane-mode drag rolls back + toasts; empty column state.
+      *Merged 2026-07-29 as PR #4 (`89e27ba`). The phone verification above was
+      NOT run before merge — it remains outstanding, alongside Phase 3's.*
 - [ ] **Phase 5 — Linking & history.** Call↔lead linking UI, per-lead history
       (same scorecard component as Coach), metrics strip, call delete with
       AlertDialog. **Verify:** link → history renders identically to Coach
@@ -408,6 +436,7 @@ stays live throughout. Do not start a phase until the previous one is merged.
 | Required-miss scorecard semantics (§5.3) | Own planning pass + own test call, post-migration |
 | Filler regex tightening (`so\|like\|right` inflate) | Any scoring-quality pass |
 | Kanban stale-indicators + never-called sort/filter | If the dashboard hygiene tile proves insufficient in use |
+| Collapsible kanban columns (the §7 rail, reversed) | If the stage list ever grows past what a viewport fits. The pattern is real — Trello, Jira and Linear all collapse a column to a vertical strip — it was simply the wrong trade at six columns on a full-width board. Re-add as a per-column toggle the owner controls, remembered across visits, NOT hardcoded to one stage. |
 | CSV import re-add | If a real lead list ever arrives from outside Google Maps (bought list, GHL export, collaborator's spreadsheet) |
 | Funnel visualisation re-add | ~50+ leads flowing through stages |
 | Multi-user, real auth, RLS, POPIA, Sentry, VoIP | The "last 20%" — when anyone else uses this |
