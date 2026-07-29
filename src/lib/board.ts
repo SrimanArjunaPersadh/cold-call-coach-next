@@ -38,7 +38,12 @@ export type Stage = { key: StageKey; label: string }
 export const STAGES: readonly Stage[] = [
   { key: "new", label: "New" },
   { key: "no_answer", label: "No answer / VM" },
-  { key: "callback", label: "Call back requested" },
+  // "Call back requested" until 2026-07-30, shortened because it was the one
+  // label that truncated once §7's flex threshold dropped to 1024px and the
+  // columns narrowed to ~174px. The others all fit. Shorter is also the better
+  // column header: a kanban column names the state its cards are in, and "Call
+  // back" is the state. Stage KEYS are untouched — this is display only.
+  { key: "callback", label: "Call back" },
   { key: "interested", label: "Interested" },
   { key: "booked", label: "Booked meeting" },
   { key: "not_interested", label: "Not interested" },

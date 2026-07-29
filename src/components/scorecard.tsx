@@ -32,10 +32,23 @@ export type ScorecardData = {
 
 export type ScorecardProps = {
   data: ScorecardData
-  /** Omit to render read-only — that is how Phase 5's history will render it. */
+  /** Omit to render read-only — that is how Phase 5's history renders it. */
   onSwapSpeaker?: () => void
   /** The debounced-persist note. `null` hides the line. */
   saveNote?: { tone: "info" | "error"; text: string } | null
+  /**
+   * What an ABSENT `metrics` object means, which differs by caller — the one
+   * branch §5.2's "single source, no forked markup" needs.
+   *
+   * `"message"` (default) is the Coach loop: metrics are computed here and now,
+   * so their absence is a state worth naming.
+   *
+   * `"omit"` is Phase 5's lead history, where the strip is dropped entirely —
+   * not zeros, not "—", no withheld block, no empty band. A call saved before
+   * metrics existed simply has no metrics, and that is `storedMetricsHtml`'s
+   * `if (!m || !m.talk_listen) return ''` (index.html:1531) carried over exactly.
+   */
+  metricsAbsent?: "message" | "omit"
   className?: string
 }
 
@@ -241,6 +254,7 @@ export function Scorecard({
   data,
   onSwapSpeaker,
   saveNote,
+  metricsAbsent = "message",
   className,
 }: ScorecardProps) {
   const { createdAt, durationSeconds, scores, turns, repSpeaker, metrics } = data
@@ -250,6 +264,13 @@ export function Scorecard({
   // "Swap speakers" is meaningless with three voices — the control cycles then,
   // and says so.
   const swapLabel = speakers.length > 2 ? "Next speaker" : "Swap speakers"
+
+  // No metrics AND nothing to say about it → the band does not render at all.
+  // Checked here rather than inside MetricsStrip because a Band that returned
+  // null content would still draw its own border and padding: visible chrome
+  // announcing an absence, which is the opposite of the intent.
+  const showMetrics =
+    metrics !== null || metricsAbsent === "message" || saveNote != null
 
   return (
     <article
@@ -288,20 +309,22 @@ export function Scorecard({
       </header>
 
       {/* ── Metrics strip ──────────────────────────────────────────────── */}
-      <Band>
-        <MetricsStrip metrics={metrics} singleSpeaker={singleSpeaker} />
-        {saveNote ? (
-          <p
-            role="status"
-            className={cn(
-              "mt-4 text-label",
-              saveNote.tone === "error" ? "text-fail" : "text-muted-foreground",
-            )}
-          >
-            {saveNote.text}
-          </p>
-        ) : null}
-      </Band>
+      {showMetrics ? (
+        <Band>
+          <MetricsStrip metrics={metrics} singleSpeaker={singleSpeaker} />
+          {saveNote ? (
+            <p
+              role="status"
+              className={cn(
+                "mt-4 text-label",
+                saveNote.tone === "error" ? "text-fail" : "text-muted-foreground",
+              )}
+            >
+              {saveNote.text}
+            </p>
+          ) : null}
+        </Band>
+      ) : null}
 
       {/* ── Review audit ───────────────────────────────────────────────── */}
       {scores ? (

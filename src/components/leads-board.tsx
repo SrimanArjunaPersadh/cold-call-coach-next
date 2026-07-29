@@ -42,6 +42,7 @@ import {
   type Lead,
 } from "@/lib/board"
 import { errorText, leadsApi } from "@/lib/leads-api"
+import { leadsCache } from "@/lib/leads-cache"
 import { cn } from "@/lib/utils"
 
 /** px of movement before a press becomes a drag, so a tap still opens the editor. */
@@ -107,12 +108,12 @@ export function LeadsBoard() {
     let failure: unknown = null
     let rows: Lead[] = []
     try {
-      const data = await leadsApi<{ leads: Lead[] }>(
-        "/api/leads",
-        undefined,
-        "Could not load leads",
-      )
-      rows = data.leads || []
+      // Through the shared cache (Phase 5), so the Coach attach-combobox can join
+      // THIS request rather than firing a second GET — the dedup STATUS §4
+      // describes, which used to come free when Coach and Leads were one
+      // document. `true` forces the fetch, so the board still always reloads on
+      // mount and on Refresh: Phase 4's observable behaviour is unchanged.
+      rows = await leadsCache.load(true)
     } catch (err) {
       failure = err
     }
@@ -147,6 +148,18 @@ export function LeadsBoard() {
   useEffect(() => {
     void loadLeads()
   }, [loadLeads])
+
+  /**
+   * Keep the shared cache in step with the board.
+   *
+   * Without this the Coach combobox could offer a lead that was renamed or
+   * deleted here minutes ago, since it reads the cache rather than re-fetching.
+   * Done in an effect rather than inside the `setLeads` updaters because an
+   * updater must stay a pure function of `prev` — React is free to call it twice.
+   */
+  useEffect(() => {
+    if (!loading && !error) leadsCache.publish(leads)
+  }, [leads, loading, error])
 
   // ── Move: optimistic, then PATCH, then roll back if it failed ───────────
 
@@ -498,25 +511,34 @@ export function LeadsBoard() {
           }}
           onClick={onBoardClick}
         >
-          {/* ── Six columns, one row (§7 as amended) ───────────────────────
+          {/* ── Six columns, one row (§7 as amended twice) ─────────────────
               The row is full-bleed: a kanban is a datagrid and wants width,
               unlike Coach and Dashboard, which are reading surfaces and keep
-              the shell's measure. Below xl the columns hold 272px and the row
-              scrolls (which is what edge autoscroll is for — §3 calls it a
-              mobile necessity); at xl and up they flex to fill, so all six
-              stages are on screen at once. The full-bleed width is what pays
-              for the sixth column the rail used to save. */}
+              the shell's measure. The full-bleed width is what pays for the
+              sixth column the rail used to save.
+
+              AMENDED 2026-07-30. The flex threshold was `xl` (1280px), which
+              was simply set too high: a 1920×1080 laptop at 150% Windows
+              scaling reports ~1150 CSS px, so the columns never flexed, held
+              272px, demanded ~1776px, and the owner had to run the browser at
+              65% zoom to see all six — the exact failure the terminal rail had
+              been invented to avoid, arriving through a breakpoint instead.
+              `lg` (1024px) is the real floor for six columns; gap-2 rather
+              than gap-4 buys back 40px of it, and 8 is on §4.3's scale.
+
+              Below `lg` the columns hold 256px and the row scrolls, which is
+              what edge autoscroll is for (§3 calls it a mobile necessity). */}
           <div
             ref={boardRef}
             aria-busy={loading}
-            className="-mx-4 flex snap-x snap-proximity items-stretch gap-4 overflow-x-auto px-4 pb-2 sm:-mx-8 sm:px-8"
+            className="-mx-4 flex snap-x snap-proximity items-stretch gap-2 overflow-x-auto px-4 pb-2 sm:-mx-8 sm:px-8"
           >
             {STAGES.map((stage) => {
               const items = listFor(stage.key)
               return (
                 <section
                   key={stage.key}
-                  className="flex w-68 shrink-0 snap-start flex-col rounded-lg border border-border bg-card xl:w-auto xl:min-w-0 xl:flex-1"
+                  className="flex w-64 shrink-0 snap-start flex-col rounded-lg border border-border bg-card lg:w-auto lg:min-w-0 lg:flex-1"
                 >
                   <header className="flex items-center justify-between gap-2 rounded-t-lg border-b border-border bg-muted px-2 py-2">
                     <h2 className="eyebrow truncate">{stage.label}</h2>

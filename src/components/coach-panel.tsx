@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { Container } from "@/components/app-shell"
+import { LeadCombobox } from "@/components/lead-combobox"
 import {
   Scorecard,
   ScorecardEmpty,
@@ -20,9 +21,15 @@ import {
 } from "@/components/scorecard"
 import { SecretModal } from "@/components/secret-modal"
 import { Button } from "@/components/ui/button"
+import type { Lead } from "@/lib/board"
+import { attachPayload } from "@/lib/call-history"
 import { metricsForPersist, nextRepSpeaker } from "@/lib/coach"
 import { fmtSize, fmtTime } from "@/lib/format"
+import { leadBusinessName } from "@/lib/lead-combo"
+import { errorText, leadsApi } from "@/lib/leads-api"
+import { leadsCache } from "@/lib/leads-cache"
 import { computeMetrics, type DiarisedTurn } from "@/lib/metrics"
+import { takePendingLead, type PendingLead } from "@/lib/pending-call"
 import { asRubricScores, type RubricScores } from "@/lib/rubric"
 import { apiFetch } from "@/lib/secret"
 import { cn } from "@/lib/utils"
@@ -195,6 +202,24 @@ export function CoachPanel() {
     text: string
   } | null>(null)
 
+  // ── Call ↔ lead linking (Phase 5) ───────────────────────────────────────
+  // Two paths, both the old app's. FORWARD: the lead modal's "Call this lead"
+  // hands a lead over, the chip names it, and create-upload saves `lead_id` with
+  // the row. AFTER THE FACT: the combobox under a finished scorecard PATCHes the
+  // link on. Neither replaces the other — you do not always know which lead you
+  // are about to ring, and you always know afterwards.
+
+  /** The lead the NEXT recording will link to. */
+  const [attachedLead, setAttachedLead] = useState<PendingLead | null>(null)
+  /** The just-analysed call, i.e. the one the combobox can still link. */
+  const [lastCallId, setLastCallId] = useState<string | null>(null)
+  const [attachLeads, setAttachLeads] = useState<Lead[]>([])
+  const [attachQuery, setAttachQuery] = useState("")
+  const [attachStatus, setAttachStatus] = useState<{
+    tone: "info" | "ok" | "err"
+    text: string
+  } | null>(null)
+
   const rec = useRef({
     mr: null as MediaRecorder | null,
     stream: null as MediaStream | null,
@@ -347,6 +372,89 @@ export function CoachPanel() {
     setSaveNote(null)
   }, [])
 
+  // ── The forward path: a lead handed over by "Call this lead" ─────────────
+  //
+  // Read-and-clear on mount. `attachedLead` was a module variable in the old app,
+  // so a reload lost it and the next recording went out unlinked; the handoff is
+  // one-shot for exactly that reason. See lib/pending-call.ts.
+  //
+  // THE ONE SUPPRESSION IN THIS CODEBASE, and why it is the right call here.
+  // `set-state-in-effect` is about cascading renders, and its own guidance carves
+  // out reading from an external system — which sessionStorage is. Every way of
+  // avoiding it is worse:
+  //
+  //   · `useState(() => takePendingLead())` or a ref read during render both run
+  //     DURING render, so the server returns null (no window) and the client
+  //     returns the lead. The first client render would then disagree with the
+  //     prerendered HTML — a hydration mismatch — and render would stop being
+  //     pure, because `takePendingLead` CLEARS the key it reads.
+  //   · Putting the lead in the URL instead would fix the lint and break the
+  //     behaviour: the attachment would survive a reload, which is the stale-link
+  //     footgun lib/pending-call.ts exists to avoid.
+  //
+  // So: read after mount, which is correct, and accept one state update on the
+  // pass that mounts an empty Coach panel.
+  useEffect(() => {
+    const pending = takePendingLead()
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reading sessionStorage after mount is the only hydration-safe option; see above
+    if (pending) setAttachedLead(pending)
+  }, [])
+
+  /** The attach control is about ONE call, so a new recording makes it stale. */
+  const resetAttach = useCallback(() => {
+    setLastCallId(null)
+    setAttachQuery("")
+    setAttachStatus(null)
+    // NOT `attachedLead`: that is the lead you are still calling, and recording a
+    // second attempt at the same prospect must keep it. Only the ✕ clears it.
+  }, [])
+
+  /**
+   * Load the leads the combobox lists, reusing the board's request.
+   *
+   * `leadsCache.load()` without `force` returns rows the board already fetched,
+   * or joins its in-flight GET — so opening Coach after Leads costs no request at
+   * all. A failure is deliberately swallowed: the call is already recorded and
+   * scored, and the combobox degrades to "No leads match." rather than putting an
+   * error over finished work. That is the old app's `catch (_) {}` at line 1796.
+   */
+  const revealAttach = useCallback(async () => {
+    try {
+      setAttachLeads(await leadsCache.load())
+    } catch {
+      /* combobox shows "No leads match." */
+    }
+  }, [])
+
+  const attachToLead = useCallback(
+    async (lead: Lead) => {
+      if (!lastCallId) return
+      const name = leadBusinessName(lead)
+      setAttachStatus({ tone: "info", text: "Linking…" })
+      try {
+        await leadsApi(
+          `/api/calls?id=${encodeURIComponent(lastCallId)}`,
+          {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(attachPayload(lead.id)),
+          },
+          "Could not link call",
+        )
+        setAttachQuery(name)
+        setAttachStatus({ tone: "ok", text: `Linked to ${name}.` })
+      } catch (err) {
+        // The server's own message, in red, next to the control that failed —
+        // and the picked lead stays pickable, so retry is one tap.
+        setAttachStatus({
+          tone: "err",
+          text: errorText(err, "Could not link call"),
+        })
+      }
+    },
+    [lastCallId],
+  )
+
   // Persist rep_speaker + metrics through PATCH /api/calls (the design doc's
   // save-analysis step, folded into the existing route). Debounced 500ms so
   // rapid swaps write once.
@@ -415,7 +523,8 @@ export function CoachPanel() {
     setMic("checking") // disables the button during the await
     setHint("")
     setAnalyzeDisabled(true)
-    resetAnalysis() // last call's transcript/metrics/scores are stale now
+    resetAttach() // last call's attach control is stale now…
+    resetAnalysis() // …and so are its transcript, metrics and scores
     if (playbackUrlRef.current) {
       URL.revokeObjectURL(playbackUrlRef.current)
       playbackUrlRef.current = null
@@ -483,6 +592,7 @@ export function CoachPanel() {
     cleanupStream,
     finishRecording,
     resetAnalysis,
+    resetAttach,
     setMic,
     startMeter,
     stopMeter,
@@ -535,8 +645,11 @@ export function CoachPanel() {
           mime_type: recording.mime,
           // There was never a UI for this. It stays a localStorage default.
           offer_context: localStorage.getItem("offer_context_default") || "",
-          // Call↔lead linking is Phase 5.
-          lead_id: null,
+          // The lead handed over by "Call this lead", so the row is linked from
+          // the moment it exists rather than PATCHed afterwards. Null when you
+          // opened Coach directly — the combobox below the scorecard is the path
+          // for that, and it is the common one.
+          lead_id: attachedLead ? attachedLead.id : null,
         }),
       })
       const createJson = await createRes.json().catch(() => ({}))
@@ -601,6 +714,19 @@ export function CoachPanel() {
         text: `Transcript and coaching scores ready for recording ${callId}.`,
       })
       setHint("Transcript and coaching scores ready.")
+
+      // Offer the after-the-fact "Attach to lead" control. If a lead was already
+      // handed over, create-upload saved `lead_id` with the row — so reflect that
+      // rather than asking again.
+      setLastCallId(callId)
+      await revealAttach()
+      if (attachedLead) {
+        setAttachQuery(attachedLead.business)
+        setAttachStatus({
+          tone: "ok",
+          text: `Linked to ${attachedLead.business}.`,
+        })
+      }
     } catch (err) {
       const message =
         err instanceof Error && err.message ? err.message : "Upload failed."
@@ -613,7 +739,7 @@ export function CoachPanel() {
     } finally {
       setAnalyzing(false)
     }
-  }, [persistAnalysis, recording, resetAnalysis])
+  }, [attachedLead, persistAnalysis, recording, resetAnalysis, revealAttach])
 
   // ── Speaker swap ────────────────────────────────────────────────────────
 
@@ -641,6 +767,29 @@ export function CoachPanel() {
       <header>
         <h1 className="text-title">Coach</h1>
       </header>
+
+      {/* ── Calling <business> ──────────────────────────────────────────────
+          Which lead the next recording links to. A LINKED-STATE INDICATOR IS
+          STATE, NOT INTERACTION, so it does not earn cyan — the same ruling as
+          Phase 3's recording indicator and Phase 4's drop highlight. --surface-2
+          and a border carry it. */}
+      {attachedLead ? (
+        <section className="flex items-center gap-4 rounded-lg border border-border bg-muted p-2">
+          <span className="eyebrow shrink-0">Calling</span>
+          <span className="min-w-0 flex-1 truncate text-subhead">
+            {attachedLead.business}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Don't link this call to ${attachedLead.business}`}
+            onClick={() => setAttachedLead(null)}
+          >
+            <span aria-hidden>✕</span>
+          </Button>
+        </section>
+      ) : null}
 
       {/* ── Mic state + record control ──────────────────────────────────── */}
       <section className="rounded-lg border border-border bg-card p-4">
@@ -771,6 +920,45 @@ export function CoachPanel() {
       ) : (
         <ScorecardEmpty />
       )}
+
+      {/* ── Attach to lead (§ the after-the-fact path) ───────────────────────
+          Only once there is a call to attach. Sits below the scorecard because
+          that is when the question arises: the call is scored, and now it needs
+          somewhere to live. */}
+      {lastCallId ? (
+        <section className="rounded-lg border border-border bg-card p-4">
+          <label htmlFor="attach-lead" className="eyebrow mb-2 block">
+            Attach to lead
+          </label>
+          <LeadCombobox
+            id="attach-lead"
+            leads={attachLeads}
+            value={attachQuery}
+            onValueChange={setAttachQuery}
+            onSelect={(lead) => void attachToLead(lead)}
+          />
+          {attachStatus ? (
+            <p
+              role="status"
+              className={cn(
+                "mt-2 text-label",
+                attachStatus.tone === "err"
+                  ? "text-fail"
+                  : attachStatus.tone === "ok"
+                    ? "text-pass"
+                    : "text-muted-foreground",
+              )}
+            >
+              {attachStatus.text}
+            </p>
+          ) : (
+            <p className="mt-2 text-label text-muted-foreground">
+              Optional. Link this call to a lead to keep it in that lead&rsquo;s
+              history.
+            </p>
+          )}
+        </section>
+      ) : null}
 
       <SecretModal />
     </Container>
