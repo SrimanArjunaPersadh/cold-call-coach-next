@@ -1,6 +1,10 @@
 import { Container } from "@/components/app-shell"
 import { ScoreBadge } from "@/components/score-badge"
 import { BoardDemo } from "@/components/styleguide/board-demo"
+import {
+  CallHistoryDemo,
+  ComboboxDemo,
+} from "@/components/styleguide/history-demo"
 import { ScorecardDemo } from "@/components/styleguide/scorecard-demo"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -366,6 +370,18 @@ export default function StyleguidePage() {
           panel is the one shadow. Shown flattened here — the live one is fixed
           over the viewport.
         </p>
+        <p className="mt-4 max-w-prose text-body text-foreground-2">
+          §4.3&rsquo;s modal rules, added 2026-07-30, are structural and cannot be
+          shown flattened — check them on the real lead modal instead. A modal
+          carrying only a form stays at 512px; one carrying a scorecard takes
+          1024px. The <strong className="font-semibold">panel never scrolls</strong>
+          — a region inside it does, so the close control stays put instead of
+          scrolling away from you. And the content column is{" "}
+          <code className="font-mono text-label">1fr</code>, never{" "}
+          <code className="font-mono text-label">auto</code>: an auto column takes
+          the width of its widest child, which is what made the lead modal scroll
+          sideways.
+        </p>
         <div className="mt-4 grid gap-8 sm:grid-cols-2">
           <div>
             <label htmlFor="sg-input" className="eyebrow mb-2 block">
@@ -440,6 +456,42 @@ export default function StyleguidePage() {
         </p>
         <div className="mt-4">
           <BoardDemo />
+        </div>
+      </Section>
+
+      {/* ---------------------------------------------------------- Phase 5 */}
+      <Section title="Attach-to-lead combobox" reference="§10 · §4.4">
+        <p className="max-w-prose text-body text-foreground-2">
+          Hand-rolled rather than a primitive, for one reason: option selection
+          fires on <code className="font-mono text-label">mousedown</code> with{" "}
+          <code className="font-mono text-label">preventDefault()</code>, so the
+          choice lands before the input blurs (§10). A{" "}
+          <code className="font-mono text-label">click</code> handler loses that
+          race on a phone. Click-outside closes, Enter picks the active row,
+          Escape closes, arrows move; rows are 44px. Search matches business,
+          contact name or phone. The linked-state chip at the bottom is state, not
+          interaction, so it takes no cyan — the same ruling as the recorder&rsquo;s
+          indicator and the board&rsquo;s drop highlight.
+        </p>
+        <div className="mt-4">
+          <ComboboxDemo />
+        </div>
+      </Section>
+
+      <Section title="Call history row" reference="§5.2 · §4.4 · §6">
+        <p className="max-w-prose text-body text-foreground-2">
+          The per-lead history inside the lead modal. Each call collapses to a
+          badge, a date and its top fix; opening one renders the SAME scorecard
+          component the Coach panel uses, read-only — no swap control, because
+          swapping here would recompute and re-persist metrics the Coach panel
+          owns. The metrics strip is <strong className="font-semibold">formatted
+          from the stored object, never recomputed</strong> (§6), so a call saved
+          before metrics existed renders no strip at all rather than zeros or
+          dashes. Delete uses the AlertDialog and pending state Phase 4 built for
+          lead delete, which closes the one ⚠ gap STATUS §4 recorded against it.
+        </p>
+        <div className="mt-4">
+          <CallHistoryDemo />
         </div>
       </Section>
 

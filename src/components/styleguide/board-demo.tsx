@@ -135,7 +135,7 @@ export function BoardDemo() {
               Drop leads here
             </p>
           </Column>
-          <Column label="Call back requested" count="·">
+          <Column label="Call back" count="·">
             <CardSkeleton />
             <CardSkeleton />
           </Column>

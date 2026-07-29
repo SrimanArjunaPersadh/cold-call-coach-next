@@ -172,6 +172,21 @@ largest element is a stat):
   whitespace, crisp type. No zebra striping, no icon soup, no illustration.
 - Every interactive element: visible hover state + 2px `--accent` focus ring.
   Keyboard focus always visible.
+- **Modals — sized to their contents, and the shell never scrolls.** *Added
+  2026-07-30 during Phase 5; this section previously said nothing about modal
+  width, and the default 512px was inherited from shadcn rather than chosen.*
+  A modal that carries only a form stays narrow (512px). A modal that carries a
+  **scorecard** takes 1024px — at 512px the audit grid, metrics strip and
+  transcript could only be read sideways, through a letterbox, which is how the
+  lead modal shipped in Phase 5 and was rejected on sight. Two structural rules
+  come with it, and both are behaviour, not decoration:
+  - **The panel does not scroll; a region inside it does.** The close control is
+    positioned against the panel, so if the panel is the scrolling box the close
+    control scrolls away — and reading a call's score at the bottom of a lead
+    leaves no way out but scrolling back to the top. Wrong, and fixed.
+  - **The content column is `1fr`, never `auto`.** An auto-sized column takes the
+    width of its widest child, so a single long URL or a wide grid makes the
+    whole modal scroll horizontally instead of the content wrapping inside it.
 
 ### 4.4 The four states — acceptance rule
 Every surface ships all four states or it does not ship:
@@ -279,6 +294,28 @@ computeMetrics(turns: DiarisedTurn[], repSpeaker: number): {
 > nothing carries machinery for a mode that no longer exists. Superseded text is
 > struck through. The idea is captured in §12 in case the stage list ever grows.
 
+> **AMENDED AGAIN 2026-07-30, during Phase 5, by the owner.** The width rule
+> below said the columns flex above **1280px** and hold 272px under it. That
+> threshold was wrong in practice and the reason is worth writing down: a
+> 1920×1080 laptop at Windows' default 150% display scaling reports about
+> **1150 CSS px**, so the breakpoint never fired, the columns stayed at 272px,
+> the row demanded ~1776px, and the owner had to run the browser at **65% zoom
+> to see all six columns.** That is precisely the failure the terminal rail was
+> invented to prevent — two stages effectively hidden — arriving through a
+> media query instead of a container. **The threshold is now `lg` (1024px)**,
+> which is the real floor for six readable columns, and the inter-column gap
+> drops from 16px to 8px (both on §4.3's scale) to buy back 40px of it. Below
+> 1024px the columns hold 256px and the row scrolls, which is the phone case
+> edge autoscroll exists for. Lesson recorded, not just the fix: **CSS pixels
+> are not hardware pixels, and a breakpoint chosen against a spec sheet will be
+> wrong on the machine the tool is actually used on.**
+>
+> One label changed with it. At ~174px, `Call back requested` was the only column
+> header that truncated, so it is now **`Call back`**; the other five fit. Shorter
+> is also the better header — a kanban column names the state its cards are in,
+> and "Call back" is that state. **Stage keys are untouched** (`callback`), so
+> this is a display change only and no stored row is affected.
+
 - **Six columns**, one per stage, in this order: `new · no_answer · callback ·
   interested · booked · not_interested`. ~~Five live columns at full width; the
   terminal stage collapses to a count-chip rail — `Not interested (12)` —
@@ -290,9 +327,12 @@ computeMetrics(turns: DiarisedTurn[], repSpeaker: number): {
   because they are reading surfaces and prose wants a measure. This is not
   cosmetic: six columns need more width than the shell has, so a capped
   container silently hid two of them, which is exactly what the rail had been
-  invented to avoid. Above 1280px the columns flex to fill the viewport; below
+  invented to avoid. ~~Above 1280px the columns flex to fill the viewport; below
   it they hold 272px and the row scrolls horizontally — which is what edge
-  autoscroll is for.
+  autoscroll is for.~~ **Above 1024px (`lg`) the columns flex to fill the
+  viewport, at an 8px gap; below it they hold 256px and the row scrolls
+  horizontally — which is what edge autoscroll is for.** Corrected 2026-07-30,
+  see the second amendment note above.
 - Drag-drop: optimistic move, edge autoscroll on mobile, failed persist rolls
   back position AND stage visibly + error toast (behaviour identical to old
   app's verified offline handling). **Pointer events, never HTML5 drag-and-drop**

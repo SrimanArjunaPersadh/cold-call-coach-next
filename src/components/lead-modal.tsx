@@ -1,7 +1,9 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useRef, useState } from "react"
 
+import { LeadCalls } from "@/components/lead-calls"
 import type { ToastTone } from "@/components/toast"
 import {
   AlertDialog,
@@ -28,7 +30,9 @@ import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { STAGES, type Lead } from "@/lib/board"
+import { leadBusinessName } from "@/lib/lead-combo"
 import { errorText, leadsApi } from "@/lib/leads-api"
+import { setPendingLead } from "@/lib/pending-call"
 
 // ══ Add / edit / delete a lead ═════════════════════════════════════════════
 //
@@ -74,8 +78,32 @@ export function LeadModal({
 
   const contentRef = useRef<HTMLDivElement>(null)
   const firstFieldRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
 
   const editing = lead !== null
+
+  /**
+   * "Call this lead" — the §7-compliant home for the entry point the old app put
+   * on the card face.
+   *
+   * §7 fixes the card at four things (business, phone, rating, website) and Phase
+   * 4 CUT the old 📞 button rather than hiding it. It resurfaces here, one tap
+   * deeper, on the surface you already open by tapping a card — so the board stays
+   * a datagrid and the action still exists.
+   *
+   * The lead rides to Coach through a one-shot sessionStorage handoff, because
+   * these are two routes now rather than two views of one document. Coach reads
+   * and clears it on mount, so a reload loses the attachment exactly as the old
+   * app's in-memory `attachedLead` did.
+   */
+  function onCallLead() {
+    if (!lead) return
+    setPendingLead({ id: lead.id, business: leadBusinessName(lead) })
+    onOpenChange(false)
+    // router.push scrolls to top by default, which is the old app's explicit
+    // `window.scrollTo({ top: 0 })` in `startCallForLead`.
+    router.push("/coach")
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -157,6 +185,12 @@ export function LeadModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        // Wide, because this modal carries a SCORECARD, not just a form (amended
+        // 2026-07-30). At the default 512px the audit grid, the metrics strip and
+        // the transcript all had to be read through a letterbox, sideways. 1024px
+        // is close to full width on a ~1150px viewport and still leaves the scrim
+        // visible, so it reads as a panel over the board rather than a new page.
+        className="max-w-5xl"
         // `key` remounts the form when the modal moves to another lead, so the
         // uncontrolled inputs pick up the new defaultValues. Without it, opening
         // lead B after lead A shows A's details.
@@ -189,40 +223,50 @@ export function LeadModal({
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
-          {FIELDS.map((field, i) => (
-            <div key={field.key}>
-              <label htmlFor={`lead-${field.key}`} className="eyebrow mb-2 block">
-                {field.label}
-                {field.required ? " *" : ""}
-              </label>
-              <Input
-                id={`lead-${field.key}`}
-                name={field.key}
-                type={field.type}
-                required={field.required}
-                ref={i === 0 ? firstFieldRef : undefined}
-                defaultValue={
-                  lead && lead[field.key] != null ? String(lead[field.key]) : ""
-                }
-              />
-            </div>
-          ))}
+          {/* Two columns once there is room (amended 2026-07-30). A 1024px-wide
+              single-line text input is worse than a cramped one — the eye has to
+              travel the whole panel to read six characters of phone number. The
+              short fields pair up; Notes and Calls below span the full width,
+              because those two actually want it. */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {FIELDS.map((field, i) => (
+              <div key={field.key}>
+                <label
+                  htmlFor={`lead-${field.key}`}
+                  className="eyebrow mb-2 block"
+                >
+                  {field.label}
+                  {field.required ? " *" : ""}
+                </label>
+                <Input
+                  id={`lead-${field.key}`}
+                  name={field.key}
+                  type={field.type}
+                  required={field.required}
+                  ref={i === 0 ? firstFieldRef : undefined}
+                  defaultValue={
+                    lead && lead[field.key] != null ? String(lead[field.key]) : ""
+                  }
+                />
+              </div>
+            ))}
 
-          <div>
-            <label htmlFor="lead-stage" className="eyebrow mb-2 block">
-              Stage
-            </label>
-            <Select
-              id="lead-stage"
-              name="stage"
-              defaultValue={lead?.stage || "new"}
-            >
-              {STAGES.map((stage) => (
-                <option key={stage.key} value={stage.key}>
-                  {stage.label}
-                </option>
-              ))}
-            </Select>
+            <div>
+              <label htmlFor="lead-stage" className="eyebrow mb-2 block">
+                Stage
+              </label>
+              <Select
+                id="lead-stage"
+                name="stage"
+                defaultValue={lead?.stage || "new"}
+              >
+                {STAGES.map((stage) => (
+                  <option key={stage.key} value={stage.key}>
+                    {stage.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
 
           <div>
@@ -235,6 +279,14 @@ export function LeadModal({
               defaultValue={lead?.notes ?? ""}
             />
           </div>
+
+          {/* ── Calls (Phase 5) ───────────────────────────────────────────
+              Edit only — an unsaved lead has no id to fetch against. It sits
+              between the fields and the actions because that is the reading
+              order: what this lead is, what happened on the calls, then what to
+              do about it. Every control inside is type="button", so nothing here
+              can submit the form it lives in. */}
+          {editing ? <LeadCalls leadId={lead.id} toast={toast} /> : null}
 
           <DialogFooter className="mt-4">
             {editing ? (
@@ -283,6 +335,21 @@ export function LeadModal({
                 Cancel
               </Button>
             </DialogClose>
+
+            {/* Outline, not the primary: Save is the action this form exists
+                for, and two cyan buttons side by side would make the reader pick
+                which one the modal is about. */}
+            {editing ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCallLead}
+                disabled={saving}
+              >
+                Call this lead
+              </Button>
+            ) : null}
+
             <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : editing ? "Save lead" : "Add lead"}
             </Button>

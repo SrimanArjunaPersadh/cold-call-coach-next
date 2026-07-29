@@ -58,19 +58,40 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          // max-h + overflow so a long form scrolls INSIDE the panel: on a
-          // 375px phone in landscape the lead form is taller than the viewport,
-          // and a modal that scrolls the page behind it strands the Save button.
-          "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-8 overflow-y-auto rounded-lg border border-border bg-card p-8 shadow-md duration-150 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
+          // THE PANEL ITSELF DOES NOT SCROLL — the region inside it does.
+          //
+          // Amended 2026-07-30. This used to be one scrolling box with the close
+          // button absolutely positioned inside it, which meant the button
+          // scrolled away: reading a call's score at the bottom of the lead modal
+          // left no way out but scrolling all the way back up. The button is
+          // positioned against this element, so as long as THIS element is the
+          // one that stays put, the button stays with it.
+          //
+          // max-h so a long form scrolls inside the panel rather than scrolling
+          // the page behind it, which on a phone strands the Save button.
+          "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-md duration-150 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
           className,
         )}
         {...props}
       >
-        {children}
+        {/*
+          grid-cols-1 is load-bearing, not cosmetic. An implicit grid column is
+          `auto`, which sizes to its widest content — so one unbreakable child
+          (a long URL, a scorecard's audit grid) made the column wider than the
+          panel and the whole modal scrolled sideways. `1fr` pins the column to
+          the panel's width and lets the content inside wrap or scroll on its own.
+
+          min-h-0 because a flex child's default min-height:auto refuses to
+          shrink below its content, which would push the panel past max-h and put
+          the scrollbar back on the page.
+        */}
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-8 overflow-y-auto p-8">
+          {children}
+        </div>
         <DialogPrimitive.Close
           data-slot="dialog-close"
           aria-label="Close"
-          className="absolute top-4 right-4 inline-flex size-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="absolute top-4 right-4 inline-flex size-11 items-center justify-center rounded-md bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <XIcon className="size-4" aria-hidden />
         </DialogPrimitive.Close>
