@@ -453,6 +453,21 @@ stays live throughout. Do not start a phase until the previous one is merged.
       AlertDialog. **Verify:** link → history renders identically to Coach
       panel; delete removes row + Storage object; retry-safety test (bad bucket
       env → 500, row survives).
+      *Merged 2026-07-30 straight into `main` (`694ea86`), fast-forward, no PR.
+      The verification above was NOT run before merge — it is outstanding,
+      alongside Phase 3's and Phase 4's. Three phases now carry unrun phone
+      gates; §8's four-states sweep is the last place they can be cleared
+      before the Phase 9 cutover.*
+      **The trap in this phase's verification, recorded so it is not forgotten:**
+      the only call with real stored metrics is the 15 July row, and it was
+      written by the OLD app. Phase 5's history renders that row correctly even
+      if the NEW persist path is broken — so "history looks right" proves
+      nothing. The gate is a **fresh ~40s two-voice recording** whose metrics
+      strip in the lead history matches what the Coach panel showed. Until that
+      specific check runs, call↔lead linking is unproven, not verified.
+      Static checks that DID pass on `694ea86`: 148 Vitest tests, `tsc`,
+      `eslint`, `next build`. None of them touch a microphone, Supabase Storage,
+      or a phone.
 - [ ] **Phase 6 — Scraper.** Apify flow + neutral zero-outcome toast.
       **Verify:** one real scrape; one all-filtered scrape shows amber toast.
 - [ ] **Phase 7 — Dashboard.** §8 exactly: 4/25 hero, last-call hero + weakest
