@@ -1,13 +1,10 @@
-import { PhasePlaceholder } from "@/components/phase-placeholder"
+import { CoachPanel } from "@/components/coach-panel"
 
 export const metadata = { title: "Coach · Cold Call Coach" }
 
+// The whole loop is browser work — MediaRecorder, Web Audio, sessionStorage, a
+// signed direct-PUT to Storage — so the page is a thin server shell around one
+// client component (Phase 3).
 export default function CoachPage() {
-  return (
-    <PhasePlaceholder
-      title="Coach"
-      phase="Phase 3"
-      summary="Record a call, upload it, get a diarised transcript and a six-dimension scorecard. Not built yet — Phase 0 shipped the shell and the design system only."
-    />
-  )
+  return <CoachPanel />
 }

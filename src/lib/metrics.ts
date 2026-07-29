@@ -64,6 +64,23 @@ const turnSeconds = (t: DiarisedTurn) =>
   Math.max(0, (Number(t.end) || 0) - (Number(t.start) || 0))
 
 /**
+ * The diarised voices on a call, ascending and deduped.
+ *
+ * Ported verbatim from the old app (index.html) in Phase 3, when three callers
+ * finally needed it: the You/Prospect transcript labels, the swap cycle, and the
+ * <2-speakers withholding rule. Non-finite speaker ids are dropped rather than
+ * carried — a malformed turn must not add a phantom voice that re-enables swap
+ * or unblocks metrics.
+ */
+export function distinctSpeakers(
+  turns: DiarisedTurn[] | null | undefined,
+): number[] {
+  return [...new Set((turns || []).map((t) => Number(t.speaker)))]
+    .filter((n) => Number.isFinite(n))
+    .sort((a, b) => a - b)
+}
+
+/**
  * Talk share, longest monologue and filler count for one call.
  *
  * Returns `null` when there are no turns or no confirmed rep speaker — there
