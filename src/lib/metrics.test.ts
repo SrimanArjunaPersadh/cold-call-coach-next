@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { computeMetrics, type DiarisedTurn } from "./metrics"
+import { computeMetrics, distinctSpeakers, type DiarisedTurn } from "./metrics"
 import {
   GOLDEN_REP_SPEAKER,
   GOLDEN_STORED_METRICS,
@@ -196,6 +196,46 @@ describe("computeMetrics — single-speaker degenerate call", () => {
       longest_monologue_seconds: 0,
       fillers: { count: 0, per_minute: null },
     })
+  })
+})
+
+describe("distinctSpeakers", () => {
+  it("dedupes and sorts ascending", () => {
+    const turns = [turn(1, 0, 1), turn(0, 1, 2), turn(1, 2, 3), turn(0, 3, 4)]
+    expect(distinctSpeakers(turns)).toEqual([0, 1])
+  })
+
+  it("sorts numerically, not lexically", () => {
+    // The trap in the default sort: [2, 10] would come back as [10, 2].
+    const turns = [turn(10, 0, 1), turn(2, 1, 2)]
+    expect(distinctSpeakers(turns)).toEqual([2, 10])
+  })
+
+  it("drops non-finite speaker ids instead of inventing a voice", () => {
+    // A phantom voice would re-enable the swap button and unblock withheld
+    // metrics — both wrong.
+    const turns = [
+      turn(0, 0, 1),
+      { speaker: Number.NaN, start: 1, end: 2, text: "" },
+      { speaker: undefined as unknown as number, start: 2, end: 3, text: "" },
+    ]
+    expect(distinctSpeakers(turns)).toEqual([0])
+  })
+
+  it("returns an empty list for no turns", () => {
+    expect(distinctSpeakers([])).toEqual([])
+    expect(distinctSpeakers(null)).toEqual([])
+    expect(distinctSpeakers(undefined)).toEqual([])
+  })
+
+  it("finds one voice on the degenerate single-speaker call", () => {
+    expect(distinctSpeakers([turn(0, 0, 20), turn(0, 21, 40)])).toEqual([0])
+  })
+
+  it("finds three when Deepgram splits the far end", () => {
+    expect(
+      distinctSpeakers([turn(0, 0, 1), turn(2, 1, 2), turn(1, 2, 3)]),
+    ).toEqual([0, 1, 2])
   })
 })
 

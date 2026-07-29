@@ -1,8 +1,10 @@
 import { Container } from "@/components/app-shell"
 import { ScoreBadge } from "@/components/score-badge"
+import { ScorecardDemo } from "@/components/styleguide/scorecard-demo"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { PALETTE, SPACING_SCALE, TYPE_RAMP } from "@/lib/design-tokens"
 
 export const metadata = { title: "Styleguide · Cold Call Coach" }
@@ -350,6 +352,77 @@ export default function StyleguidePage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+      </Section>
+
+      {/* ---------------------------------------------------------- §4.3 · §10 */}
+      <Section title="Inputs, and the one modal treatment" reference="§4.3 · §4.4">
+        <p className="max-w-prose text-body text-foreground-2">
+          Inputs take the 8px radius (§4.3 groups them with cards and modals, not
+          buttons) and are 44px tall. The Unlock modal is the only floating
+          surface Phase 3 ships: the page dims behind it with{" "}
+          <code className="font-mono text-label">--text</code> at 20%, and the
+          panel is the one shadow. Shown flattened here — the live one is fixed
+          over the viewport.
+        </p>
+        <div className="mt-4 grid gap-8 sm:grid-cols-2">
+          <div>
+            <label htmlFor="sg-input" className="eyebrow mb-2 block">
+              Passphrase
+            </label>
+            <Input id="sg-input" type="password" defaultValue="hunter2" />
+            <p role="alert" className="mt-2 text-body text-fail">
+              That passphrase was rejected. Try again.
+            </p>
+          </div>
+          <div className="flex items-center justify-center rounded-lg bg-foreground/20 p-8">
+            <div className="w-full rounded-lg border border-border bg-card p-8 shadow-md">
+              <p className="text-section">Unlock</p>
+              <p className="mt-2 text-body text-foreground-2">
+                This app is locked to you. Enter the passphrase to continue.
+              </p>
+              <Button className="mt-8 w-full">Unlock</Button>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* ---------------------------------------------------------- §4.1 · §4.4 */}
+      <Section title="Recorder — state, never interaction" reference="§4.1 · §4.4">
+        <p className="max-w-prose text-body text-foreground-2">
+          Record is a primary action, so it earns cyan. The recording indicator
+          and the level meter are <em>state</em>, so they do not: the dot is{" "}
+          <code className="font-mono text-label">--text</code>, the meter fill is{" "}
+          <code className="font-mono text-label">--text-3</code> on a{" "}
+          <code className="font-mono text-label">--border</code> track. Same rule
+          as the dashboard&rsquo;s progress bar in §8.
+        </p>
+        <div className="mt-4 flex max-w-md items-center gap-4 rounded-lg bg-muted p-4">
+          <span
+            aria-hidden
+            className="size-2 shrink-0 animate-pulse rounded-md bg-foreground"
+          />
+          <span className="eyebrow">Recording</span>
+          <span data-numeric className="text-subhead">
+            1:24
+          </span>
+          <span className="h-2 min-w-0 flex-1 overflow-hidden rounded-md bg-border">
+            <span aria-hidden className="block h-full w-2/3 bg-muted-foreground" />
+          </span>
+        </div>
+      </Section>
+
+      {/* ---------------------------------------------------------- §5.2 */}
+      <Section title="Scorecard — the sanctioned refine" reference="§5.2">
+        <p className="max-w-prose text-body text-foreground-2">
+          One component renders this everywhere: the Coach panel now, Phase
+          5&rsquo;s lead call history later, off stored rows. It only renders —
+          it never fetches and never computes a metric. All four states below;
+          the swap control in the first one is live, so tapping it recomputes
+          talk share, longest monologue and fillers from the same turns.
+        </p>
+        <div className="mt-4">
+          <ScorecardDemo />
         </div>
       </Section>
 
