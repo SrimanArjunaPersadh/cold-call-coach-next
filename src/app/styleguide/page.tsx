@@ -1,5 +1,6 @@
 import { Container } from "@/components/app-shell"
 import { ScoreBadge } from "@/components/score-badge"
+import { BoardDemo } from "@/components/styleguide/board-demo"
 import { ScorecardDemo } from "@/components/styleguide/scorecard-demo"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -423,6 +424,22 @@ export default function StyleguidePage() {
         </p>
         <div className="mt-4">
           <ScorecardDemo />
+        </div>
+      </Section>
+
+      {/* ---------------------------------------------------------- §7 */}
+      <Section title="Kanban — card and column" reference="§7 · §4.4">
+        <p className="max-w-prose text-body text-foreground-2">
+          The Phase 4 treatments. §7 fixes the card at four things — business
+          name, phone, maps rating, website link — so the extras the old card
+          carried (a Maps link, a &ldquo;No website&rdquo; flag, an industry
+          chip, a notes flag, a Call button) are gone. All six stages are full
+          columns; see the amendment note below. Nothing here is cyan: a drop
+          target is state, not interaction — the same ruling that keeps the
+          recorder&rsquo;s indicator grey.
+        </p>
+        <div className="mt-4">
+          <BoardDemo />
         </div>
       </Section>
 

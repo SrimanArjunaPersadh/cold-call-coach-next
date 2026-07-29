@@ -14,9 +14,9 @@ export const runtime = "nodejs"
 const ALLOW = "GET, POST, PATCH, DELETE"
 
 // Kanban columns = pipeline stages. The five call outcomes plus a "new" intake
-// lane. Dragging a card between columns just PATCHes `stage`. (The §7 terminal
-// rail is a layout decision — `not_interested` is still an ordinary stage
-// value here, and this route is unaware of it.)
+// lane. Dragging a card between columns just PATCHes `stage`. How the board
+// lays these out is a client decision this route knows nothing about; every one
+// of them is an ordinary stage value here.
 const STAGES = [
   "new",
   "no_answer",
