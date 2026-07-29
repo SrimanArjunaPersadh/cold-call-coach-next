@@ -65,7 +65,7 @@ every screen, every component, every empty state.
 | API | Next.js Route Handlers translating the existing serverless functions 1:1 (§9) |
 | Runtime | Node runtime, NOT Edge — deliberate, carried over from the old app |
 | Data | Same Supabase project: Postgres + private Storage bucket. No schema changes. |
-| Env vars | Identical set: `ANTHROPIC_API_KEY`, `DEEPGRAM_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `APP_SECRET`, `SUPABASE_RECORDINGS_BUCKET`, Apify token. **The `APIFY_TOKEN` (spec) vs `APIFY_API_TOKEN` (code) naming inconsistency is KNOWN and PRESERVED — do not fix.** |
+| Env vars | Identical set: `ANTHROPIC_API_KEY`, `DEEPGRAM_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_SECRET`, `SUPABASE_RECORDINGS_BUCKET`, Apify token. Optional, with code defaults: `ANTHROPIC_MODEL` (→ `claude-haiku-4-5`), `PHASE1_USER_ID` (→ `solo`). **The `APIFY_TOKEN` (spec) vs `APIFY_API_TOKEN` (code) naming inconsistency is KNOWN and PRESERVED — do not fix.** *Corrected 2026-07-29: this row previously read `SUPABASE_ANON_KEY`, which no code path uses — `api/_supabase.js` reads `SUPABASE_SERVICE_ROLE_KEY`, and §9's private-bucket access and server-side clamps require service-role. Verified live against the project. The anon key is not used by this app and must not be added.* |
 | Auth | Shared-secret `x-app-secret` gate, fail-closed, `requireSecret` first line of every handler. Real auth belongs to the multi-user phase, not this one. |
 | Old app | Stays live and untouched until the cutover checklist (§11, Phase 10) passes. |
 
