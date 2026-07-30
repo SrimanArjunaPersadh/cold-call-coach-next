@@ -31,6 +31,11 @@ Deliver (a) the change, (b) exact test/verify steps, (c) exact git commands. The
 owner runs the dev server and verifies on a real phone — you cannot reach it, so
 always state exactly what to check.
 
+**The git commands are not yours to invent — copy them from §10.1.** It holds the
+whole loop (branch, commit, land, rebase-when-refused, PR variant, session start,
+§11 record-keeping). The shell is **PowerShell 5.1, which has no `&&`**: write one
+command per line, always.
+
 ## Pre-merge checklist (§10)
 
 `requireSecret` line one · no email fields · server-side clamps · zero frontend

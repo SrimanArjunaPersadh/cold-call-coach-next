@@ -1,7 +1,12 @@
-// The one door to /api/leads, on top of `apiFetch` (§ Phase 3's `lib/secret`).
+// The one door to the leads API, on top of `apiFetch` (§ Phase 3's `lib/secret`).
 // There is no second fetch wrapper in this codebase and there must not be: the
 // shared-secret prompt, the 401 re-prompt and the single retry all live in
 // `apiFetch`, and this only adds the JSON contract on top.
+//
+// Phase 6 pointed it at `/api/scrape` as well, without changing a line of it: a
+// scrape is an insert into leads, its 4xx/5xx bodies carry the same `{ error }`
+// shape, and its failures need the same tunnel/offline copy below. Adding a
+// second wrapper for one more path is how a codebase ends up with two.
 
 import { apiFetch } from "./secret"
 

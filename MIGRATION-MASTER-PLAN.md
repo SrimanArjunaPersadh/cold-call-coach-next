@@ -75,6 +75,22 @@ every screen, every component, every empty state.
 
 Adjudicated 2026-07-29. This table is closed. Nothing may be added to it.
 
+> **AMENDED 2026-07-30, during Phase 6, by the owner.** One addition, and it is
+> logged here precisely because this table is closed: the scraper's **location
+> field gained a suggestion list** (`SA_LOCATIONS` in `lib/scrape.ts`, rendered
+> as a native `<datalist>`). The owner asked for it after the first Phase 6
+> build — typing "Durban, South Africa" in full every run, with a mistyped area
+> costing a real Apify run before it announces itself. **A future session must
+> not strip this as an invented feature.** Three things bound it: the input stays
+> free text, so the list can only save keystrokes and can never refuse a search;
+> the list is hardcoded, so no new dependency, env var or per-keystroke cost
+> enters the app; and every entry carries its region, because the actor geocodes
+> the string as typed and Berea and Morningside each exist in both Durban and
+> Johannesburg. **Google Places Autocomplete was considered and rejected** for
+> this migration — it wants a second paid dependency, a `GOOGLE_PLACES_KEY`, a
+> new §9 route and per-keystroke billing on a tool whose only other cost is one
+> Apify run. Logged in §12 as the re-add if the calling ever leaves KwaZulu-Natal.
+
 ### KEEP (translate as-is, behaviour identical)
 | Feature | Notes |
 |---|---|
@@ -84,7 +100,7 @@ Adjudicated 2026-07-29. This table is closed. Nothing may be added to it.
 | Speaker swap (manual cycle, full metric recompute, debounced persist) | Behaviour-identical. |
 | Call ↔ lead linking (`lead_id` FK, `ON DELETE SET NULL`, per-lead call history with metrics strip) | Behaviour-identical. |
 | Call delete (storage-first ordering, 404-from-Storage = success, skip `pending/`, `user_id='solo'` clamp) | Behaviour-identical. `confirm()` may become a shadcn AlertDialog — sanctioned upgrade. |
-| Apify Google Maps scraper (25-result server clamp, phone-first dedup, minReviews default 5, neutral zero-outcome toast) | Behaviour-identical. |
+| Apify Google Maps scraper (25-result server clamp, phone-first dedup, minReviews default 5, neutral zero-outcome toast) | Behaviour-identical, **plus the location suggestion list added 2026-07-30 — see the amendment above.** |
 | Lead add/edit/delete modal | shadcn Dialog + Form. |
 | Drag-drop with edge autoscroll | Mobile necessity. Library choice free (dnd-kit suggested); behaviour must match. |
 | Stale-leads hygiene counts (never called / quiet 7+ days) | The one dashboard element that improves at low volume. Dashboard tile — see §8. |
@@ -316,6 +332,59 @@ computeMetrics(turns: DiarisedTurn[], repSpeaker: number): {
 > and "Call back" is that state. **Stage keys are untouched** (`callback`), so
 > this is a display change only and no stored row is affected.
 
+> **AMENDED A THIRD TIME 2026-07-30, during Phase 6, by the owner.** The stage
+> headers are **pinned**, and the board is a **pane rather than a page**. The
+> report: with a long column, moving a card at the bottom of it meant dragging
+> that card all the way up to the top of the page just to read which stage was
+> which — the labels had scrolled away, so the one thing a drag needs to know was
+> the one thing not on screen. Three changes, and the first is the only one that
+> is really a decision:
+> - **The board owns its vertical scroll.** `/leads` no longer scrolls the
+>   document; the board scrolls inside a viewport-height pane (`--board-h` =
+>   `100dvh` − nav − `<main>`'s padding, in `globals.css` where those numbers
+>   meet exactly once). This was not a preference: `overflow-x: auto` already
+>   made the board a scroll container in **both** axes — CSS computes
+>   `overflow-y: visible` to `auto` when the other axis is not `visible` — so a
+>   `sticky` header inside it could only ever pin against the board's own
+>   scrollport. It had no height to scroll within, so nothing pinned. **A pinned
+>   header is not available without this.** The app shell is deliberately NOT
+>   touched: Coach and Dashboard are reading surfaces, still scroll the document,
+>   and Phase 5's `router.push` scroll-to-top keeps working because of it.
+> - **Edge autoscroll gained the vertical axis**, which is the cost of the pane,
+>   not a new feature. The drag could never scroll the document, so a slot below
+>   the fold was already unreachable; now that the board scrolls, the drag has to
+>   be able to scroll it — and the pane's fold is closer than the page's was.
+> - **The drop target is the whole column, header included.** It was the card area
+>   only, so a card dropped on a pinned header — the largest and now the only
+>   always-visible part of a column — landed nowhere and silently kept the
+>   previous target. Dropping on a header resolves to index 0 with no special
+>   case, because the pointer is above every card's midpoint, and "top of that
+>   stage" is the right meaning anyway.
+>
+> **The first cut of this shipped two bugs, both caught on screen by the owner
+> within minutes, and the lesson is worth more than the fix.** Five columns ended
+> halfway down the board and, one screen further down, the headers, the borders
+> and every empty column vanished, leaving loose cards on the page background.
+> Cause: `align-items: stretch` sizes items to the **flex line**, and in a
+> fixed-height scroller the line is the scrollport — one screen. So each column's
+> box was one screen tall while the longest column's cards overflowed it, and a
+> sticky header is constrained to its **containing block**, so once you scrolled
+> past that box the header had nothing left to pin inside. The scroller and the
+> flex row are now two elements: the row is `min-h-full`, so its height is
+> `max(one screen, tallest column)` and the columns stretch to the ROW. Second
+> bug, same session: the nav is `4rem` **plus a 1px border**, so the pane was 1px
+> too tall, the document grew a scrollbar it should never have had, and scrolling
+> that 1px took the pinned headers off screen with it. `--nav-h` now sits on the
+> `<header>` so the border is inside the number. **The lesson, and it rhymes with
+> the second amendment's: a pane layout is only as correct as the box you measured
+> against. `stretch` measures the scrollport, `sticky` measures its containing
+> block, and a border you forgot measures itself.**
+>
+> Not on `/styleguide`, and that is not an omission: the header's rendering is
+> byte-identical (same `bg-muted`, same border, same eyebrow). What changed is
+> scroll behaviour, which a short static gallery cannot show and which §4 does not
+> govern.
+
 - **Six columns**, one per stage, in this order: `new · no_answer · callback ·
   interested · booked · not_interested`. ~~Five live columns at full width; the
   terminal stage collapses to a count-chip rail — `Not interested (12)` —
@@ -332,8 +401,11 @@ computeMetrics(turns: DiarisedTurn[], repSpeaker: number): {
   autoscroll is for.~~ **Above 1024px (`lg`) the columns flex to fill the
   viewport, at an 8px gap; below it they hold 256px and the row scrolls
   horizontally — which is what edge autoscroll is for.** Corrected 2026-07-30,
-  see the second amendment note above.
-- Drag-drop: optimistic move, edge autoscroll on mobile, failed persist rolls
+  see the second amendment note above. **The board is also a fixed-height pane
+  that owns its own vertical scroll, and the stage headers pin to its top** —
+  third amendment, same date.
+- Drag-drop: optimistic move, edge autoscroll on mobile **in both axes** (§7's
+  third amendment), failed persist rolls
   back position AND stage visibly + error toast (behaviour identical to old
   app's verified offline handling). **Pointer events, never HTML5 drag-and-drop**
   — native DnD failed on link-bearing cards, could not autoscroll the
@@ -414,6 +486,110 @@ only; zero frontend lines carry any token.
 - Dropdown/menu items: `onmousedown` + `preventDefault` semantics (or shadcn
   primitives that handle blur-before-click correctly). Touch targets ≥44px.
 
+### 10.1 The git loop — the exact commands, every time
+
+*Added 2026-07-30 at the owner's request, so this stops being re-derived every
+session. Claude Code: these are the commands to hand over; do not invent
+variations, and do not chain them with `&&`.*
+
+**The shell is PowerShell 5.1.** It has no `&&` — `A && B` is a parser error, not
+a chain. Every block below is one command per line for that reason. Paste the
+whole block; PowerShell runs the lines in order. (`git` itself is identical on
+Windows; only the chaining differs.)
+
+**Repo facts:** remote is `origin`
+(`github.com/SrimanArjunaPersadh/cold-call-coach-next`), `main` tracks
+`origin/main`, `gh` is installed and authenticated.
+
+**① Start a phase** — one phase, one branch (§10). Uncommitted work follows you
+onto the new branch, so this is also the recovery when you started on `main` by
+mistake.
+
+```
+git checkout main
+git pull --ff-only
+git checkout -b phase-N-shortname
+```
+
+**② Commit** — after the gates pass and after `/review`. Never before.
+
+```
+npm test
+npx tsc --noEmit
+npm run lint
+npm run build
+git add .
+git commit -m "Phase N: what it does"
+git push -u origin phase-N-shortname
+```
+
+`-u` only on the first push of a branch; plain `git push` after that.
+
+**③ Land it on `main`** — the default is a fast-forward, which is how Phase 5
+landed.
+
+```
+git checkout main
+git pull --ff-only
+git merge --ff-only phase-N-shortname
+git push
+git branch -d phase-N-shortname
+git push origin --delete phase-N-shortname
+```
+
+`--ff-only` on both is deliberate: it **fails loudly** rather than silently
+inventing a merge commit. If `git merge --ff-only` refuses, `main` has moved since
+the branch started. Rebase the branch onto it and land again:
+
+```
+git checkout phase-N-shortname
+git fetch origin
+git rebase origin/main
+git push --force-with-lease
+git checkout main
+git merge --ff-only phase-N-shortname
+git push
+```
+
+`--force-with-lease`, never plain `--force`: it refuses if the remote moved under
+you instead of overwriting whatever is there.
+
+**③b Land it as a PR instead** — when the diff is worth reading on GitHub, which
+is how Phase 4 landed (PR #4). Same ① and ②, then:
+
+```
+gh pr create --fill
+gh pr view --web
+gh pr merge --merge --delete-branch
+git checkout main
+git pull --ff-only
+```
+
+This one DOES create a merge commit; that is the trade for the reviewable diff.
+
+**④ Start of any session, or after landing anything** — get level before you
+touch code:
+
+```
+git checkout main
+git pull --ff-only
+git status
+```
+
+**⑤ Record the phase in §11.** A phase is not done when it merges, it is done when
+§11 says what actually got verified. State plainly which phone gates ran and which
+did not — three phases already carry unrun gates because that note was honest.
+
+```
+git add MIGRATION-MASTER-PLAN.md
+git commit -m "docs: record Phase N merged, gates run/unrun"
+git push
+```
+
+**Housekeeping.** `phase-1-api` and `phase-2-metrics` are still on this machine
+long after merging. Delete a merged local branch with `git branch -d <name>` —
+lowercase `-d` refuses if it is not merged, which is the check you want.
+
 ---
 
 ## 11. PHASED BUILD CHECKLIST
@@ -492,6 +668,7 @@ stays live throughout. Do not start a phase until the previous one is merged.
 | Filler regex tightening (`so\|like\|right` inflate) | Any scoring-quality pass |
 | Kanban stale-indicators + never-called sort/filter | If the dashboard hygiene tile proves insufficient in use |
 | Collapsible kanban columns (the §7 rail, reversed) | If the stage list ever grows past what a viewport fits. The pattern is real — Trello, Jira and Linear all collapse a column to a vertical strip — it was simply the wrong trade at six columns on a full-width board. Re-add as a per-column toggle the owner controls, remembered across visits, NOT hardcoded to one stage. |
+| Google Places Autocomplete for the scraper's location field (§3 amendment, 2026-07-30) | If the calling ever leaves KwaZulu-Natal, or a hand-typed area wastes a real Apify run twice. Costs a `GOOGLE_PLACES_KEY`, a §9 route and per-keystroke billing; the hardcoded `SA_LOCATIONS` list is the standing answer until then. |
 | CSV import re-add | If a real lead list ever arrives from outside Google Maps (bought list, GHL export, collaborator's spreadsheet) |
 | Funnel visualisation re-add | ~50+ leads flowing through stages |
 | Multi-user, real auth, RLS, POPIA, Sentry, VoIP | The "last 20%" — when anyone else uses this |

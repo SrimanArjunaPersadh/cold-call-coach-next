@@ -20,8 +20,16 @@ export function Container({
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-10 border-b border-border bg-card">
-        <Container className="flex h-16 items-center justify-between gap-4">
+      {/* `--nav-h` is on the HEADER, not on the Container inside it, and that is
+          the fix for a real bug rather than a tidy-up. The height has to be the
+          space this bar OCCUPIES, because the kanban pane subtracts it from the
+          viewport: with the height on the Container, the 1px `border-b` sat
+          outside it, the nav took 65px, the pane took 64, and the document grew a
+          scrollbar it should never have — which then scrolled the pinned column
+          headers off the top of the screen. box-sizing is border-box, so putting
+          it here makes the border part of the 4rem instead of extra. */}
+      <header className="sticky top-0 z-10 h-[var(--nav-h)] border-b border-border bg-card">
+        <Container className="flex h-full items-center justify-between gap-4">
           {/* Hidden below 640px: wordmark + three nav items need 400px and an
               iPhone SE gives 375. On a phone the nav is the whole chrome, and it
               already says where you are. */}

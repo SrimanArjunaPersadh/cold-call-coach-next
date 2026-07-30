@@ -62,6 +62,27 @@
 
   /* §4.3 — the one and only shadow. Floating surfaces only. */
   --shadow-float: 0 4px 20px -2px rgba(10, 17, 40, 0.05);
+
+  /* -------------------------------------------------------------------------
+     Layout heights — the ONE place the app's chrome measurements meet.
+     Added 2026-07-30 with §7's third amendment (pinned kanban headers).
+
+     `--nav-h` is the sticky top bar — the space it OCCUPIES, border included,
+     which is why app-shell puts it on the `<header>` and not on the Container
+     inside it. It is a variable rather than a `h-16` because the kanban has to
+     subtract it, and a nav that grew while a hardcoded 64px sat in a calc
+     somewhere else would push the board past the viewport and quietly hand the
+     page a second scrollbar. That is not hypothetical: the first cut of this had
+     the 1px `border-b` outside the 64px, and 1px of document scroll was enough
+     to drag the pinned column headers off the top of the screen.
+
+     `--board-h` is what the kanban PANE may take: the viewport, less the nav,
+     less `<main>`'s 2rem/2rem padding. `dvh` and not `vh` — on a phone the
+     collapsing URL bar makes `vh` taller than what you can actually see, which
+     is the one thing a pinned header cannot survive. Same unit the dialog uses.
+     ------------------------------------------------------------------------- */
+  --nav-h: 4rem;
+  --board-h: calc(100dvh - var(--nav-h) - 4rem);
 }
 
 @theme inline {
