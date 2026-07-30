@@ -644,8 +644,38 @@ stays live throughout. Do not start a phase until the previous one is merged.
       Static checks that DID pass on `694ea86`: 148 Vitest tests, `tsc`,
       `eslint`, `next build`. None of them touch a microphone, Supabase Storage,
       or a phone.
-- [ ] **Phase 6 — Scraper.** Apify flow + neutral zero-outcome toast.
+- [x] **Phase 6 — Scraper.** Apify flow + neutral zero-outcome toast.
       **Verify:** one real scrape; one all-filtered scrape shows amber toast.
+      *Merged 2026-07-30 into `main` (`d8a739e`), fast-forward, no PR.*
+      **The box is ticked because the gate actually ran** — the owner scraped for
+      real and verified on a real phone, and reported it working. That is the
+      convention from here: a ticked box means the phase's own Verify line
+      happened on the owner's device. Phases 3, 4 and 5 stay unticked for exactly
+      that reason and **this phase does not clear them** — their gates are still
+      outstanding, and §8's four-states sweep is the last place to clear them
+      before the Phase 9 cutover.
+      **Three things landed with this phase that its Verify line never mentioned,
+      because the owner asked for them mid-phase.** Recorded so the scope is
+      honest rather than tidy:
+      - **A loading panel** for the search, reusing the Coach recording indicator
+        (live dot, the query being run, an elapsed clock). The greyed-out
+        disabled form it replaced said "you can't", never "something is
+        happening", and for 30–90 seconds of silence that reads as broken.
+      - **A location suggestion list** — §3 amended, since that table is closed
+        and the addition had to be recorded or a future session would strip it.
+        Google Places was considered and logged in §12 instead.
+      - **Pinned stage headers**, which is §7's third amendment and the largest
+        of the three: the board became a fixed-height pane that owns its vertical
+        scroll, edge autoscroll gained the vertical axis, and the whole column
+        became the drop target. Its first cut shipped two layout bugs the owner
+        caught on screen; both are recorded in §7 with their causes.
+      The pinned-header change is the part worth one deliberate pass if it has
+      not had one: **drop a card onto another column's pinned header** (it should
+      land at the top of that stage), **hold a dragged card at the board's bottom
+      edge** (it should autoscroll), and **scroll to the very bottom** (all six
+      columns still bordered and headed, exactly one scrollbar on the page).
+      Static checks that passed on `d8a739e`: 164 Vitest tests, `tsc`, `eslint`,
+      `next build`.
 - [ ] **Phase 7 — Dashboard.** §8 exactly: 4/25 hero, last-call hero + weakest
       dimension, gated trend, hygiene tile with filtered kanban tap-throughs.
       **Verify:** with <5 scored calls the gate message renders; counts match
