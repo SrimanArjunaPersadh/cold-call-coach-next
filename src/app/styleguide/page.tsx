@@ -1,6 +1,7 @@
 import { Container } from "@/components/app-shell"
 import { ScoreBadge } from "@/components/score-badge"
 import { BoardDemo } from "@/components/styleguide/board-demo"
+import { DashboardDemo } from "@/components/styleguide/dashboard-demo"
 import {
   CallHistoryDemo,
   ComboboxDemo,
@@ -492,6 +493,30 @@ export default function StyleguidePage() {
         </p>
         <div className="mt-4">
           <CallHistoryDemo />
+        </div>
+      </Section>
+
+      {/* ---------------------------------------------------------- §8 · §0 */}
+      <Section title="Dashboard — progress and trend" reference="§8 · §0 · §4.1">
+        <p className="max-w-prose text-body text-foreground-2">
+          The Phase 7 treatments, and neither is cyan: a progress bar is{" "}
+          <em>state</em>, not interaction, so the fill is{" "}
+          <code className="font-mono text-label">--text-3</code> on a{" "}
+          <code className="font-mono text-label">--border</code> track and turns{" "}
+          <code className="font-mono text-label">--pass</code> only at 100%. Same
+          ruling as the recorder&rsquo;s indicator above. The weakest-dimension
+          bar is the one exception to the grey fill, and it is not a new colour:
+          a dimension mean is a /5 score, so it takes §4.1&rsquo;s badge mapping,
+          the same one colouring the badge beside it. The trend is a navy stroke
+          with no gradient fill and no dots per point; below{" "}
+          <span data-numeric>5</span> scored calls it renders §0&rsquo;s unlock
+          message instead of a line through noise. Every number here — both bar
+          widths and the line&rsquo;s path — is computed in{" "}
+          <code className="font-mono text-label">lib/dashboard.ts</code> and
+          tested (§6).
+        </p>
+        <div className="mt-4">
+          <DashboardDemo />
         </div>
       </Section>
 

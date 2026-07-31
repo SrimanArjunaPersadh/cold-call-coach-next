@@ -32,6 +32,24 @@ type SecretPrompt = (message: string) => Promise<string>
 
 let prompt: SecretPrompt | null = null
 
+/**
+ * The one prompt currently on screen, so concurrent callers SHARE it.
+ *
+ * THIS IS A DEADLOCK FIX, not an optimisation (found in Phase 7 review).
+ * `<SecretModal />` keeps its resolver in a single ref, so a second `prompt()`
+ * overwrites the first: the first promise then never settles, and any caller
+ * awaiting it hangs for the lifetime of the tab. Nothing hit that until the
+ * dashboard issued two `apiFetch` calls in one `Promise.allSettled` — a cold tab
+ * opened straight on /dashboard would take the passphrase, resolve one request,
+ * and sit on loading skeletons forever with no way to retry.
+ *
+ * The modal is a singleton and there is one passphrase, so one question is the
+ * correct behaviour anyway: whoever asks first opens it, everyone else awaits the
+ * same answer. Cleared as soon as it settles, so the NEXT prompt — the 401
+ * re-prompt after a rotated passphrase — really does ask again.
+ */
+let pendingPrompt: Promise<string> | null = null
+
 /** Called by `<SecretModal />` on mount; returns its own cleanup. */
 export function registerSecretPrompt(fn: SecretPrompt): () => void {
   prompt = fn
@@ -43,14 +61,29 @@ export function registerSecretPrompt(fn: SecretPrompt): () => void {
 /**
  * The current passphrase, prompting once (and storing it) if we don't have one.
  * A `message` forces a re-prompt — that is the rejected-passphrase path.
+ *
+ * "Once" is now literal across concurrent callers, not just sequential ones —
+ * see `pendingPrompt` above.
  */
 export async function ensureSecret(message?: string): Promise<string> {
   const existing = getSecret()
   if (existing && !message) return existing
   if (!prompt) return existing // no modal mounted — let the request 401 honestly
-  const entered = await prompt(message || "")
-  if (entered) setSecret(entered)
-  return entered
+
+  if (!pendingPrompt) {
+    pendingPrompt = prompt(message || "")
+      .then((entered) => {
+        if (entered) setSecret(entered)
+        return entered
+      })
+      .finally(() => {
+        // Cleared on failure too, so a rejected prompt is retryable rather than
+        // a permanently poisoned promise every later caller awaits — the same
+        // rule `leadsCache` follows for its in-flight GET.
+        pendingPrompt = null
+      })
+  }
+  return pendingPrompt
 }
 
 type ApiFetchOptions = Omit<RequestInit, "headers"> & {

@@ -49,6 +49,7 @@ import {
 } from "@/lib/board"
 import { errorText, leadsApi } from "@/lib/leads-api"
 import { leadsCache } from "@/lib/leads-cache"
+import { takeOpenLead } from "@/lib/open-lead"
 import { cn } from "@/lib/utils"
 
 /** px of movement before a press becomes a drag, so a tap still opens the editor. */
@@ -87,6 +88,10 @@ export function LeadsBoard() {
   const boardRef = useRef<HTMLDivElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
+  /** The lead the dashboard asked us to open, held across a FAILED load so the
+   *  retry still answers it. Cleared the moment a load succeeds. */
+  const openLeadRef = useRef<string | null>(null)
+
   /** Read by the pointer handlers, which are created once per drag. */
   const leadsRef = useRef(leads)
   leadsRef.current = leads
@@ -113,6 +118,25 @@ export function LeadsBoard() {
   const fetchLeads = useCallback(async () => {
     setLoading(true)
     setError(null)
+
+    // Phase 7's tap-through: the dashboard's last-call hero hands over a lead id
+    // and navigates here, because §8's "full scorecard" already exists inside
+    // this modal and no route returns one call on its own.
+    //
+    // Taken from sessionStorage before the await — read-and-clear, the same
+    // contract as Phase 5's Call-this-lead handoff (`lib/pending-call.ts`), so
+    // it can never be answered twice.
+    //
+    // It then survives IN A REF until a load actually succeeds, and that is the
+    // fix for a real hole: taking the key and returning down the failure path
+    // below consumed the intent and dropped it. Tap the hero on a bad
+    // connection, get the board's error state, hit Refresh — the rows arrive and
+    // the modal never opens, with nothing on screen explaining why, and the only
+    // way back is to walk to /dashboard and tap again. The ref is cleared only
+    // once the request the intent belongs to has landed.
+    const requested = takeOpenLead() ?? openLeadRef.current
+    openLeadRef.current = requested
+
     let failure: unknown = null
     let rows: Lead[] = []
     try {
@@ -135,7 +159,21 @@ export function LeadsBoard() {
       return
     }
     setLeads(rows)
-  }, [])
+
+    // Post-await, so nothing here is a synchronous state write inside the mount
+    // effect. A lead that is no longer on the board SAYS SO rather than opening
+    // nothing at all — deleted between the dashboard rendering it and the tap.
+    openLeadRef.current = null
+    if (requested) {
+      const lead = rows.find((l) => String(l.id) === String(requested))
+      if (lead) {
+        setModalLead(lead)
+        setModalOpen(true)
+      } else {
+        toast("That lead is no longer on the board.", "err")
+      }
+    }
+  }, [toast])
 
   /**
    * One in-flight GET, however many callers ask. In the old app the callers

@@ -56,6 +56,15 @@ export const STAGES: readonly Stage[] = [
  */
 export type Lead = {
   id: string
+  /**
+   * Both are `timestamptz not null` in Postgres and `GET /api/leads` selects
+   * `*`, so both are always really there — they were simply never declared,
+   * because nothing before Phase 7 read them. §8's "quiet for 7+ days" does:
+   * a lead's last activity is the newer of its last call and its own edit.
+   * Type-only addition; no route, no query and no board behaviour changes.
+   */
+  created_at?: string | null
+  updated_at?: string | null
   name?: string | null
   business?: string | null
   phone?: string | null
