@@ -213,7 +213,13 @@ Every surface ships all four states or it does not ship:
   never a silent revert. Failed optimistic updates roll back visibly + toast.
 - **Happy** — the spec'd layout.
 
-The four-states matrix in STATUS.md is the acceptance checklist per phase.
+~~The four-states matrix in STATUS.md is the acceptance checklist per phase.~~
+**The four-states matrix in §13 is the acceptance checklist per phase.** *Moved
+2026-08-02 during Phase 8: the matrix was in the OLD repo's STATUS.md, which
+Phase 9 archives, so the checklist this migration is graded against would have
+been switched off with the thing it grades. §13 is that matrix rewritten for what
+this app renders; the old one stays where it is as the record of what was
+translated from.*
 
 ---
 
@@ -752,6 +758,58 @@ stays live throughout. Do not start a phase until the previous one is merged.
 | Funnel visualisation re-add | ~50+ leads flowing through stages |
 | Multi-user, real auth, RLS, POPIA, Sentry, VoIP | The "last 20%" — when anyone else uses this |
 | Custom domain | With the above |
+
+---
+
+## 13. FOUR-STATES MATRIX — THE ACCEPTANCE CHECKLIST
+
+*Added 2026-08-02 during Phase 8. §4.4 has always named "the four-states matrix
+in STATUS.md" as the acceptance checklist per phase — but that file lives in the
+OLD repo, which Phase 9 archives. The checklist this migration is graded against
+cannot live in the deployment being switched off, so it moves here, rewritten for
+what the new app actually renders. The old §4 matrix stays where it is as the
+record of what was translated FROM.*
+
+**"Verified" means read in the source on this branch** — the states exist in
+code. Runtime confirmation is the owner's (dev server in Chrome + a real phone);
+Claude Code cannot reach that server. A row's file reference is where to look.
+
+| Surface | Empty | Loading | Error | Happy |
+|---|---|---|---|---|
+| Mic / Record `coach-panel` | "No recording yet." | `checking`, Record disabled | `insecure` / `unsupported` / `denied` (3-step fix list) / `no-device`, + Retry | `prompt` / `granted`, Record enabled |
+| Recorder `coach-panel` | hidden when idle | pulsing dot, mm:ss, RMS meter | `onerror` → "Recorder error — try again." | playback + meta + Analyze enabled |
+| Upload / Analyze `coach-panel` | region mounted, text empty | "Creating upload slot…" → "Uploading audio to private storage…" → "Transcribing & scoring… (10–60s)" | `--fail` status, local blob kept so Analyze retries | "Transcript and coaching scores ready" |
+| Scorecard `scorecard` | `ScorecardEmpty` — one card, not the old app's three panels | `ScorecardSkeleton`, `aria-busy` — **closes the old app's ⚠ transcript gap** | "No transcript returned." / "No scores returned." | §5.2 layout: header, metrics strip, six dimension rows, collapsed transcript |
+| Metrics strip `scorecard` | "No metrics yet.", or omitted entirely in lead history | save note "Saving speaker & metrics…" | single-speaker warn block; save-note error variant | 3 tiles + estimate disclosure |
+| Attach-to-lead `coach-panel` · `lead-combobox` | "No leads match."; hint text when idle | "Linking…" | `--fail` status carrying the server message | "Linked to {business}." |
+| Leads board `leads-board` | per-column "Drop leads here" | six columns × 2 `CardSkeleton`, counts render `·` not `0`, `aria-busy`, **all four toolbar buttons disabled** | board replaced by the message; **Refresh stays live — it is the retry**, the two mutating controls do not | six stage columns with counts |
+| Lead modal `lead-modal` | Add mode — empty form, "Business and phone are required." | "Saving…" / "Deleting…" on the pending button | toast; **modal stays open with everything typed still in it** | Edit mode with Delete + "Call this lead" |
+| Lead modal → Calls `lead-calls` | "No calls yet. Record one from Coach and link it here." | "Loading calls…" | placeholder carries the message, list not cleared | collapsed per-call rows: score, metrics, transcript, Delete |
+| Delete call `lead-calls` | — | AlertDialog + "Deleting…" — **closes the old app's ⚠ no-text gap** | toast; row's dialog stays open, button live, row survives | "Call deleted" toast, list re-reads |
+| Find leads (Apify) `scrape-modal` | zero-outcome **amber** toast, never green | live-dot panel: query being run + elapsed clock, not a greyed form | distinct copy per `code`: `no_token`, `timeout`, generic | toast "N added, M duplicates skipped…" |
+| Dashboard `dashboard-view` | per-tile: "No calls logged this week yet." · "No call scored yet." · "No dimension scores available yet." · "No leads yet." · §0's trend gate | per-tile skeleton bars in `--surface-2` | per-tile `Failed` + "Try again" — **never a silent zero**, since 0 and "could not load" look identical | §8's three groups: 4/25, last-call hero + floor + trend, hygiene counts |
+| Unlock `secret-modal` | modal on first API call | — | "That passphrase was rejected. Try again." | stored in `sessionStorage`, request retried once |
+| Route error `app/error.tsx` | — | — | §4-styled panel, Try again (`unstable_retry`) + Go to Coach; message and digest to the console, never to the screen | — |
+| Global error `app/global-error.tsx` | — | — | same panel, own `<html>`/`<body>`/font; escape is a plain `<a>`, since client routing is what broke | — |
+| 404 `app/not-found.tsx` | — | — | "That page doesn't exist." + the three real destinations | — |
+
+**No ⚠ rows.** The old app carried three; two are closed above and the third was
+CSV import, which §3 CUT. Nothing in this app ships happy-path-only.
+
+**The three route-level rows are Phase 8's own finding.** Before it, none of the
+three files existed: a render throw fell through to Next's built-in screen and an
+unmatched URL to its 404 — no nav, no §4 tokens, and the OS colour scheme on an
+app §4 declares light-only. Six phases of component work never surfaced it
+because every one of them was inside a component. The lesson worth keeping: **a
+four-states audit that only walks components will pass an app whose routes have
+no states at all.**
+
+**Two live regions were fixed in the same sweep** (`coach-panel`, both). Each
+mounted `role="status"` together with its message, and the attach status swapped
+between a live paragraph and a plain one. A region that appears with its text is
+often never announced — the rule `toast.tsx` and `scrape-modal.tsx` already
+carried in comments, from Phases 4 and 6. Phase 3 predates it. The upload ladder
+is the longest blind wait in the app, so it was the worst place to be silent.
 
 ---
 

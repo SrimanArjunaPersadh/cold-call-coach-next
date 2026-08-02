@@ -1,4 +1,5 @@
 import { Container } from "@/components/app-shell"
+import { FaultPanel } from "@/components/fault-panel"
 import { ScoreBadge } from "@/components/score-badge"
 import { BoardDemo } from "@/components/styleguide/board-demo"
 import { DashboardDemo } from "@/components/styleguide/dashboard-demo"
@@ -517,6 +518,67 @@ export default function StyleguidePage() {
         </p>
         <div className="mt-4">
           <DashboardDemo />
+        </div>
+      </Section>
+
+      {/* ------------------------------------------------------------ §4.4 */}
+      <Section title="Dead ends — error and 404" reference="§4.4 · §13">
+        <p className="max-w-prose text-body text-foreground-2">
+          The Phase 8 treatment, and the only one on this page that stands in for
+          a whole route rather than a component. Three surfaces render it — a
+          screen that threw, the shell that threw, and a URL that matches nothing
+          — so it is one component (
+          <code className="font-mono text-label">FaultPanel</code>) rather than
+          three near-copies. A resting card: border, no shadow, §4.3 spacing.
+        </p>
+        <p className="mt-4 max-w-prose text-body text-foreground-2">
+          Neither variant prints the error message or its digest. §9 keeps stack
+          traces and storage paths out of API error bodies; a render error is the
+          same leak with the same reader, so the exact error goes to the console
+          and the screen says where to find it. Every variant carries a way out
+          as well as a retry — a screen offering only &ldquo;Try again&rdquo; is a
+          trap when the retry keeps failing.
+        </p>
+        <div className="mt-4 flex flex-col gap-4">
+          <FaultPanel
+            eyebrow="Error"
+            title="This screen failed to render."
+            actions={
+              <>
+                <Button type="button">Try again</Button>
+                <Button variant="outline" type="button">
+                  Go to Coach
+                </Button>
+              </>
+            }
+          >
+            <p>
+              Nothing was lost — your calls and leads live on the server, not in
+              this page. Try again first. If it fails the same way twice, the
+              exact error is in the browser console.
+            </p>
+          </FaultPanel>
+
+          <FaultPanel
+            eyebrow="404"
+            title="That page doesn't exist."
+            actions={
+              <>
+                <Button type="button">Coach</Button>
+                <Button variant="outline" type="button">
+                  Leads
+                </Button>
+                <Button variant="outline" type="button">
+                  Dashboard
+                </Button>
+              </>
+            }
+          >
+            <p>
+              This app has three screens — record and score a call, work the
+              board, or check the week. Pick one.
+            </p>
+          </FaultPanel>
         </div>
       </Section>
 
