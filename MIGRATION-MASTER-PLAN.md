@@ -573,6 +573,45 @@ git pull --ff-only
 
 This one DOES create a merge commit; that is the trade for the reviewable diff.
 
+**③c Land it as a SQUASH instead** — one commit on `main` per phase, with the
+reviewable diff on GitHub. This is how Phase 8 landed (`bbde089`, PR #5). *Added
+2026-08-02, after Phase 8, because this variant breaks the housekeeping command
+below and nothing said so.*
+
+```
+gh pr create --fill
+gh pr view --web
+gh pr merge --squash --delete-branch
+git checkout main
+git pull --ff-only
+```
+
+**The catch, and it is the whole reason this variant is written down.** A squash
+writes a NEW commit containing your branch's changes; your branch's own commit is
+not an ancestor of it. Git therefore does not know the branch was merged, and
+`git branch -d` **refuses** — the exact check the housekeeping note calls "the
+check you want" reports a false alarm here, on a branch that is fully landed.
+
+Do NOT reach straight for `-D`. Prove the content landed first, then override:
+
+```
+git checkout main
+git pull --ff-only
+git diff main phase-N-shortname --stat
+git branch -D phase-N-shortname
+git push origin --delete phase-N-shortname
+```
+
+**The `git diff` line must print nothing.** Empty means every byte of the branch
+is already on `main` and there is nothing to lose. `-D` deletes unmerged work
+without asking, so that empty diff is doing the job `-d` normally does for you.
+If it prints anything at all, STOP — something did not land, and deleting the
+branch destroys the only copy.
+
+Also note `--delete-branch` above only removes the REMOTE branch. The local one
+survives on this machine either way, which is how `phase-1-api` and
+`phase-2-metrics` outlived their merges.
+
 **④ Start of any session, or after landing anything** — get level before you
 touch code:
 
@@ -594,7 +633,10 @@ git push
 
 **Housekeeping.** `phase-1-api` and `phase-2-metrics` are still on this machine
 long after merging. Delete a merged local branch with `git branch -d <name>` —
-lowercase `-d` refuses if it is not merged, which is the check you want.
+lowercase `-d` refuses if it is not merged, which is the check you want. **That
+check only works after ③ or ③b.** After a squash (③c) it refuses on branches that
+ARE merged, and the diff-then-`-D` sequence in ③c is the replacement. Know which
+way the phase landed before you delete its branch.
 
 ---
 
