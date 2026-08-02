@@ -680,6 +680,55 @@ stays live throughout. Do not start a phase until the previous one is merged.
       dimension, gated trend, hygiene tile with filtered kanban tap-throughs.
       **Verify:** with <5 scored calls the gate message renders; counts match
       SQL run by hand.
+      *Merged 2026-07-31 into `main` (`f124d97`), fast-forward, no PR.*
+      **The box is unticked because the Verify line has not run on the owner's
+      device** — neither the gate message below 5 scored calls nor the hygiene
+      counts against hand-run SQL. Phases 3, 4 and 5 stay unticked for their own
+      reasons and this phase does not clear them; §8's four-states sweep remains
+      the last place all four can be cleared before the Phase 9 cutover.
+      **One deliberate divergence from §8, and it is a decision rather than a
+      gap.** §8 says the hygiene counts tap through to a filtered kanban. **They
+      do not tap through**, because §12 defers the kanban-side filter: a link
+      that lands on an unfiltered board reads as "show me those 5" and shows all
+      of them, which is the silent wrong answer §4.4 exists to prevent. The
+      tap-through arrives with the filter or not at all. The comment carrying
+      this sits on `HygieneTile` in `dashboard-view.tsx` so a future session does
+      not "finish" it by adding the link alone.
+      **The last-call hero DOES tap through, and it reuses rather than adds.**
+      No route returns one call with its transcript and metrics — `GET
+      /api/calls` without `lead_id` is deliberately lean and there is no
+      GET-by-call-id, and §9's table has exactly five routes. Phase 5 already
+      renders the full scorecard inside the lead modal, so the tap navigates to
+      that lead: a one-field `sessionStorage` handoff (`lib/open-lead.ts`), the
+      same read-and-clear contract as Phase 5's `lib/pending-call.ts`, not a
+      sixth route and not a `?lead=` URL that would outlive the lead and pull
+      `useSearchParams` into the board.
+      **Three things landed that the Verify line never mentioned.** Recorded so
+      the scope is honest rather than tidy:
+      - **A concurrency deadlock in `ensureSecret`, found in `/review` and
+        fixed.** `<SecretModal />` keeps one resolver in one ref, so a second
+        `prompt()` overwrote the first and its promise never settled. Nothing hit
+        it until the dashboard issued two `apiFetch` calls in one
+        `Promise.allSettled`: a cold tab opened straight on `/dashboard` would
+        take the passphrase, resolve one request, and sit on loading skeletons
+        for the lifetime of the tab with no way to retry. Concurrent callers now
+        share one prompt, cleared on failure too so the 401 re-prompt still asks.
+      - **The tap-through intent survives a failed load.** Taking the key and
+        returning down the board's error path consumed it: tap the hero on a bad
+        connection, hit Refresh, and the rows arrive with no modal and nothing on
+        screen explaining why. It is held in a ref until a load actually lands.
+      - **`Lead.created_at` / `updated_at` declared** in `lib/board.ts`. Both are
+        `timestamptz not null` and `GET /api/leads` selects `*`, so both were
+        always there; nothing before §8's "quiet for 7+ days" read them. Type-only
+        — no route, no query, no board behaviour.
+      **On `/styleguide` before shipping, per AGENTS.md**: the progress bar and
+      the trend line are new treatments, so they went up as `DashboardDemo`
+      (§8 · §0 · §4.1). Neither is cyan — progress is state, not interaction, so
+      the fill is `--text-3` and turns `--pass` only at 100%; the
+      weakest-dimension bar takes §4.1's existing badge mapping because a
+      dimension mean is a /5 score, not a new colour.
+      Static checks that passed on `f124d97`: 224 Vitest tests, `tsc`, `eslint`,
+      `next build`.
 - [ ] **Phase 8 — Four-states sweep & polish.** Audit every surface against
       §4.4; fix gaps; full phone pass.
 - [ ] **Phase 9 — Cutover.** Side-by-side week: same Supabase, both apps live.
