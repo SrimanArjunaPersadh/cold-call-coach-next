@@ -55,7 +55,7 @@ export function SecretModal() {
     // The scrim is the only place --text is used as a background: it is the page
     // dimmed, not a surface. The panel is a floating surface, so it takes the one
     // shadow (§4.3).
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4">
       <div
         role="dialog"
         aria-modal="true"

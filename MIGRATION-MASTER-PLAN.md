@@ -52,6 +52,16 @@ every screen, every component, every empty state.
    the underlying n makes it noise. Gates and empty states over fake trends.
 7. **The model never does arithmetic.** Non-negotiable. See §6.
 
+> **AMENDED 2026-08-02, before Phase 8b, by the owner.** Rule 4 stands and light
+> remains the DEFAULT — but it is no longer the only skin. The owner asked for a
+> dark mode ("as it stands, it's a bit bright"), toggled from the nav. What rule
+> 4 actually defends survives intact: spacing and layout are still audited in
+> the light skin, where ambiguity has nowhere to hide. Dark is the same §4 token
+> names with §4.5's values behind them, and every other rule on this list —
+> cyan ≤5%, semantic colour only, honest numbers — is graded in BOTH skins.
+> §4.1's "identity break from NutriSA" is likewise unbroken: the identity is the
+> navy/cyan terminal palette, not the lightness of the page behind it.
+
 ---
 
 ## 2. BUILD TARGET & STACK
@@ -90,6 +100,18 @@ Adjudicated 2026-07-29. This table is closed. Nothing may be added to it.
 > this migration — it wants a second paid dependency, a `GOOGLE_PLACES_KEY`, a
 > new §9 route and per-keystroke billing on a tool whose only other cost is one
 > Apify run. Logged in §12 as the re-add if the calling ever leaves KwaZulu-Natal.
+
+> **AMENDED AGAIN 2026-08-02, before Phase 8b, by the owner.** Second addition:
+> **dark mode** — a light/dark toggle in the nav. Logged here because this table
+> is closed and an unrecorded control is a control a future session strips as
+> invented. Three things bound it: **light stays the default** (§1.4 chose it
+> deliberately; dark is opt-in and remembered in `localStorage`, and the app
+> never follows `prefers-color-scheme` — an app that flips skin because the
+> phone's clock crossed sunset is a surprise, not a feature); **it is one
+> control in the nav, not a settings screen** (this app has no settings surface
+> and does not grow one for a toggle); and **it is tokens only** — components
+> are untouched, the dark values live behind §4's existing token names (§4.5),
+> so no screen can drift dark-only or light-only. Built as Phase 8b (§11).
 
 ### KEEP (translate as-is, behaviour identical)
 | Feature | Notes |
@@ -135,6 +157,15 @@ clarity, professional density, technical precision. The Kindo screenshots are th
 taste reference for restraint and hierarchy. The navy/cyan "Neural Core" mockup
 is the **anti-reference** — if any screen starts resembling it (glowing accents,
 sci-fi labels, decoration posing as data), stop and strip.
+
+> **AMENDED 2026-08-02, before Phase 8b, by the owner.** "Light Terminal" is now
+> the default skin rather than the whole system: §4.5 adds an opt-in dark skin
+> behind the same token names. Everything else in this section — type, geometry,
+> the one-shadow rule, the four states — is skin-independent and unchanged. The
+> anti-reference warning above applies with MORE force in dark, not less: dark
+> ground plus glowing cyan is precisely the Neural Core failure mode, which is
+> why dark's cyan budget is the same ≤5% and why nothing else in the dark
+> palette saturates.
 
 ### 4.1 Palette
 Deliberate identity break from the owner's dark-themed NutriSA — separate
@@ -220,6 +251,86 @@ Phase 9 archives, so the checklist this migration is graded against would have
 been switched off with the thing it grades. §13 is that matrix rewritten for what
 this app renders; the old one stays where it is as the record of what was
 translated from.*
+
+### 4.5 Dark skin — added 2026-08-02, Phase 8b
+
+Same token names, different values, behind a `.dark` class on `<html>`. Light is
+the default; dark is opt-in from the nav toggle and remembered in
+`localStorage("theme")`. An inline script — first child of `<body>`, so it runs
+before anything paints — re-applies the stored choice, which is what prevents a
+white flash on every load of a dark-mode tab. The app never reads
+`prefers-color-scheme`; §3's second amendment records why.
+
+| Token | Dark hex | Note |
+|---|---|---|
+| `--bg` | `#0B1220` | Near-black navy — same family as light's `--text`, not grey |
+| `--surface` | `#101A2E` | Cards, panels, modals. Also the `theme-color` meta in dark. |
+| `--surface-2` | `#18233A` | Insets, table headers, skeletons |
+| `--border` | `#263248` | Still 1px, no exceptions |
+| `--text` | `#E7ECF5` | |
+| `--text-2` | `#AEBACE` | |
+| `--text-3` | `#7E8CA6` | |
+| `--accent` | `#22D3EE` | Brighter cyan — `#0891B2` silts into a dark ground. Same ≤5% cap, same interaction-only rule. |
+| `--pass` | `#22C55E` | One step brighter than light's, for contrast on dark surfaces |
+| `--warn` | `#F59E0B` | 〃 |
+| `--fail` | `#F87171` | Two steps. Red is the darkest of the three hues at equal nominal lightness, so it needs the extra lift — see the measurements below. |
+
+**These values were measured, not eyeballed** (WCAG relative luminance; the
+script is throwaway but the numbers are in the commit message). The score badge
+is the app's core output and its treatment is a 10% tint of the semantic colour
+carrying solid semantic text, so that pairing is the one that had to clear the
+bar:
+
+| Badge tint, text on 10%-over-`--surface` | Light | Dark |
+|---|---|---|
+| pass | 2.95 | **6.49** |
+| warn | 2.86 | **6.92** |
+| fail | 4.14 | **5.52** (at `#EF4444` it was only 4.25) |
+
+Five things change that are not §4.1 tokens, each recorded so a future session
+does not "fix" one:
+
+- **Solid semantic backgrounds take NAVY text on the dark skin.** One rule,
+  applied twice: `--primary-foreground` and `--destructive-foreground` both flip
+  to `#0A1128`. White on the brighter cyan is **1.81:1** and white on the
+  brighter red is **2.77:1** — both unreadable; navy is **10.34:1** and
+  **6.76:1**. This is why `#0A1128` appears in a dark palette at all.
+- **`--destructive-foreground` is a new token.** The destructive button
+  hardcoded `text-white`, which is correct on light (4.83:1) and fails on dark.
+  A hardcoded colour cannot have two skins, so it became a token — the same
+  reason §4.1 bans raw hex in components.
+- **The scrim became a token.** Modal overlays were `--text` at 20%, which in
+  dark mode is a WHITE fog over a dark page. `--scrim` now exists in its own
+  right (`rgba(10,17,40,0.2)` light / `rgba(0,0,0,0.5)` dark) and the overlays
+  use `bg-scrim`. Dimming means darker in both skins.
+- **The one shadow gets a dark value** — same geometry, `rgba(0,0,0,0.5)`. A 5%
+  navy shadow is invisible on `#0B1220`. Still exactly one shadow.
+- **`color-scheme: dark`** on `.dark`, so UA widgets (scrollbars, native form
+  controls) follow the skin.
+
+Chrome separation is at parity with light or slightly better — `--surface`
+against `--bg` is 1.08 dark vs 1.05 light, and `--border` on `--surface` is 1.35
+dark vs 1.23 light. Cards read as raised and borders stay visible without
+becoming lines that shout.
+
+**A finding this phase surfaced and deliberately did NOT fix.** Sweeping every
+rendered text node on `/styleguide` in Chrome against its composited background:
+**light fails on 108 of them, dark on none.** The light failures are almost
+entirely the score badges — `tint-warn` at 2.41:1 and `tint-pass` at 2.50:1 on
+the table's `--surface-2` rows — plus the primary button's white-on-cyan at
+3.68:1. That is pre-existing, shipped since Phase 0, and fixing it means
+reopening §4.1's palette, which is a different decision from the one that was
+asked for. It is logged in §12. The dark skin is not permitted to inherit the
+problem, which is why its numbers above clear the bar; but this phase does not
+quietly restyle the light app while adding a dark one. **Light is unchanged by
+this phase** — `--scrim` in light is `rgba(10,17,40,0.2)`, the exact value
+`bg-foreground/20` already computed to, and the `lg` button's fix moved it from
+inheriting `--text` to the navy it was always meant to have.
+
+Score badge mapping, the 10% tint treatment, the type ramp, radii and spacing
+are untouched — they are skin-independent. `/styleguide` prints BOTH hexes per
+token, and the toggle is the acceptance test: flip it and every swatch must
+match its dark column, or the file has drifted from this table.
 
 ---
 
@@ -446,6 +557,11 @@ week-over-week comparison exists.
   in JS, per §6).
 - **Trend: gated per §0** — under 5 scored calls, the unlock message; at ≥5, a
   minimal line (navy stroke, no gradient fill, no dots-per-point decoration).
+  *"Navy" here means `--text`, not the literal hex.* The line is
+  `stroke-foreground`, so on §4.5's dark skin it inverts to frost (measured at
+  14.65:1) instead of disappearing into the ground. A future session must not
+  "correct" it to a hardcoded navy — that would make the trend invisible in dark
+  and put a raw hex in a component, which §4.1 bans.
 - No average overall score anywhere.
 
 **3 — Who do I call next?**
@@ -779,6 +895,40 @@ stays live throughout. Do not start a phase until the previous one is merged.
       `next build`.
 - [ ] **Phase 8 — Four-states sweep & polish.** Audit every surface against
       §4.4; fix gaps; full phone pass.
+- [ ] **Phase 8b — Dark mode.** Owner-requested addition, 2026-08-02, on branch
+      `phase-8b-dark-mode` (§1, §3 and §4 amended the same day; §4.5 is the
+      spec). `.dark` token block in `globals.css`; nav toggle (sun/moon, ≥44px,
+      ghost variant); no-flash inline script as `<body>`'s first child;
+      `theme-color` meta follows the skin by reading `--surface` off the live
+      styles, never a hex in a component; `--scrim` token replaces the
+      `--text`-at-20% overlays in dialog, alert-dialog and the secret modal;
+      `/styleguide` prints light + dark hex per token.
+      **Two bugs this phase found rather than caused, both recorded because
+      neither is in the Verify line.**
+      - **The `theme-color` meta reset on every client-side navigation.** Next
+        owns that tag through the `viewport` export and re-renders it per route,
+        so the tint went back to light's white while the page stayed dark —
+        invisible on a laptop, and on a phone the address bar flashing white on
+        every screen change. `ThemeToggle` re-applies it on `usePathname()`
+        change. Found in Chrome, not by reading: `/styleguide` → `/dashboard`
+        put it back to `#ffffff` with `.dark` still on `<html>`.
+      - **The Record button had no text colour, in either skin.** `cn` runs
+        `tailwind-merge`, which reads §4.2's `text-body` as a text COLOUR; cva
+        emits the size class after the variant, so `text-body` won and stripped
+        `text-primary-foreground`. The button then inherited `--text` — navy on
+        cyan in light, which is legible by luck, and **frost on cyan at 1.52:1
+        in dark**, which is not. `size="lg"` has exactly one call site and it is
+        Record, the app's primary action. The `lg` size no longer carries a type
+        utility; it never rendered at 15px anyway, since the base `text-sm`
+        outranked it. The systemic fix is in §12 — it would resize every input
+        below iOS's 16px zoom threshold and needs a phone pass this phase did
+        not have.
+      **Verify:** on
+      `/styleguide`, flip the toggle — every swatch matches its dark hex, the
+      flattened modal demo dims rather than fogs, and the cyan audit passes in
+      dark; reload — the choice holds with no white flash; phone — browser
+      chrome tint follows the skin; airplane-mode-style storage check is not
+      needed (blocked storage degrades to per-tab toggle, §13 note).
 - [ ] **Phase 9 — Cutover.** Side-by-side week: same Supabase, both apps live.
       Then: point primary usage at the new app; old app archived (repo kept,
       deployment paused) only after one full week of real use with zero
@@ -798,6 +948,8 @@ stays live throughout. Do not start a phase until the previous one is merged.
 | Google Places Autocomplete for the scraper's location field (§3 amendment, 2026-07-30) | If the calling ever leaves KwaZulu-Natal, or a hand-typed area wastes a real Apify run twice. Costs a `GOOGLE_PLACES_KEY`, a §9 route and per-keystroke billing; the hardcoded `SA_LOCATIONS` list is the standing answer until then. |
 | CSV import re-add | If a real lead list ever arrives from outside Google Maps (bought list, GHL export, collaborator's spreadsheet) |
 | Funnel visualisation re-add | ~50+ leads flowing through stages |
+| **Teach `tailwind-merge` §4.2's type scale** (Phase 8b's finding, 2026-08-02) | `cn` runs `twMerge`, which does not know `text-stat/title/section/subhead/body/label` are font sizes and classifies them as text COLOURS. Wherever a component writes `text-body` before a colour class — input, textarea, select, card, and the three dialog descriptions — the *font size* is silently dropped and the element inherits 16px instead of §4.2's 15px. Phase 8b fixed only the one case where the casualty was the colour instead (the `lg` button; see §11). The general fix is `extendTailwindMerge` registering the scale as `font-size`. **It is deferred because it drops every input from 16px to 15px, and under 16px iOS Safari zooms the page on focus** — a phone-first tool cannot take that change without a real phone pass. Revisit with one. |
+| **Light-skin contrast pass** (§4.5's finding, 2026-08-02) | The light palette's badge tints measure 2.86–4.14:1 and its primary button 3.68:1, all under WCAG AA's 4.5. Phase 8b measured this while choosing dark values and left light alone — fixing it reopens §4.1, which is its own decision with its own on-screen review. Revisit if the app is ever read on a phone in sunlight and a score badge is the thing that cannot be read, or if anyone but the owner uses it. |
 | Multi-user, real auth, RLS, POPIA, Sentry, VoIP | The "last 20%" — when anyone else uses this |
 | Custom domain | With the above |
 
@@ -837,6 +989,11 @@ Claude Code cannot reach that server. A row's file reference is where to look.
 
 **No ⚠ rows.** The old app carried three; two are closed above and the third was
 CSV import, which §3 CUT. Nothing in this app ships happy-path-only.
+
+**One row does not exist, deliberately: the theme toggle (Phase 8b).** It is a
+control, not a data surface — it has nothing to load, nothing to be empty of,
+and its only failure (storage blocked) degrades to a toggle that works for the
+tab and forgets on reload, which needs no copy.
 
 **The three route-level rows are Phase 8's own finding.** Before it, none of the
 three files existed: a render throw fell through to Next's built-in screen and an

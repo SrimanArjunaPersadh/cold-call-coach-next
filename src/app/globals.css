@@ -2,11 +2,11 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* This app is LIGHT ONLY (§4 "Light Terminal"). The dark variant is redefined to
-   key off a `.dark` ancestor that we never render, so the `dark:` classes shipped
-   inside shadcn components are permanently inert. Do NOT delete this line — without
-   it `dark:` falls back to prefers-color-scheme and the app would flip on a
-   dark-mode phone. */
+/* Light is the DEFAULT skin; dark is §4.5's opt-in, applied as `.dark` on <html>
+   by lib/theme.ts (nav toggle + the no-flash init script in layout.tsx). This
+   line keys the `dark:` variant off that class and NOTHING else — without it,
+   `dark:` falls back to prefers-color-scheme and the app would flip skin because
+   the phone's clock crossed sunset, which §3's second amendment forbids. */
 @custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------------------
@@ -28,6 +28,11 @@
   --warn: #d97706; /* Warning / neutral toast / score 3     */
   --fail: #dc2626; /* Miss / error / destructive / score ≤2 */
 
+  /* §4.5 — the modal scrim, a token in its own right. It was `--text` at 20%,
+     which inverts into a WHITE fog on the dark skin; dimming means darker in
+     both skins, so the value is per-skin and the overlays use `bg-scrim`. */
+  --scrim: rgba(10, 17, 40, 0.2);
+
   /* -------------------------------------------------------------------------
      shadcn semantic layer. shadcn primitives are written against these names;
      every one of them resolves to a §4 token above. Changing a colour means
@@ -48,6 +53,10 @@
   --popover-foreground: var(--text);
   --primary: var(--accent);
   --primary-foreground: #ffffff;
+  /* A token rather than the `text-white` the destructive button used to
+     hardcode: white is correct here (4.83:1 on #DC2626) and wrong on the dark
+     skin's brighter red (2.77:1). §4.5 flips it. */
+  --destructive-foreground: #ffffff;
   --secondary: var(--surface-2);
   --secondary-foreground: var(--text);
   --muted: var(--surface-2);
@@ -85,6 +94,47 @@
   --board-h: calc(100dvh - var(--nav-h) - 4rem);
 }
 
+/* ---------------------------------------------------------------------------
+   §4.5 DARK SKIN — same token names, different values, nothing else. The shadcn
+   semantic layer above resolves through these automatically, so no component
+   knows which skin it is in. Only the tokens listed in §4.5 change; if a value
+   here is not in that table, it does not belong here.
+   --------------------------------------------------------------------------- */
+.dark {
+  color-scheme: dark;
+
+  --bg: #0b1220; /* Near-black navy, same family as light --text */
+  --surface: #101a2e; /* Cards, panels, modals — and the theme-color meta */
+  --surface-2: #18233a; /* Insets, table headers, skeletons              */
+  --border: #263248; /* Still 1px, no exceptions                      */
+  --text: #e7ecf5;
+  --text-2: #aebace;
+  --text-3: #7e8ca6;
+  --accent: #22d3ee; /* Brighter cyan — #0891B2 silts into dark ground */
+  --pass: #22c55e; /* One step brighter than light's, for contrast   */
+  --warn: #f59e0b;
+  /* Red gets one MORE step of lift than green and amber, and the reason is
+     measured, not aesthetic: red is the darkest of the three hues at equal
+     nominal lightness, so #EF4444 on the 10% badge tint lands at 4.25:1 while
+     the same step for green and amber clears 6.4:1. #F87171 puts the score
+     badge at 5.52:1. See §4.5. */
+  --fail: #f87171;
+
+  /* §4.5 — solid semantic backgrounds take NAVY text on the dark skin, not
+     white. Both of these are measured, not taste: white on the brighter cyan is
+     1.81:1 and white on the brighter red is 2.77:1, while navy is 10.34:1 and
+     6.76:1 respectively. */
+  --primary-foreground: #0a1128;
+  --destructive-foreground: #0a1128;
+
+  /* §4.5 — dimming means darker in both skins. */
+  --scrim: rgba(0, 0, 0, 0.5);
+
+  /* §4.5 — same geometry, dark value; a 5% navy shadow is invisible on #0B1220.
+     Still exactly one shadow. */
+  --shadow-float: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+}
+
 @theme inline {
   /* --- Colour utilities ---------------------------------------------------- */
   --color-background: var(--background);
@@ -101,6 +151,7 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -113,6 +164,9 @@
   --color-pass: var(--pass);
   --color-warn: var(--warn);
   --color-fail: var(--fail);
+
+  /* §4.5 — the modal scrim. Per-skin token, so overlays never invert to fog. */
+  --color-scrim: var(--scrim);
 
   /* --- Type (§4.2) --------------------------------------------------------- */
   --font-sans: var(--font-jakarta);

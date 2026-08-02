@@ -9,6 +9,8 @@
 export type PaletteToken = {
   token: string
   hex: string
+  /** §4.5's value behind the same token when `.dark` is on <html>. */
+  hexDark: string
   role: string
   /** Tailwind utilities backed by this token, for call sites. */
   utilities: string
@@ -18,68 +20,86 @@ export const PALETTE: PaletteToken[] = [
   {
     token: "--bg",
     hex: "#F7F9FC",
-    role: "App background (light frost)",
+    hexDark: "#0B1220",
+    role: "App background (light frost / near-black navy)",
     utilities: "bg-background",
   },
   {
     token: "--surface",
     hex: "#FFFFFF",
+    hexDark: "#101A2E",
     role: "Cards, panels, modals",
     utilities: "bg-card, bg-popover",
   },
   {
     token: "--surface-2",
     hex: "#EFF3F9",
+    hexDark: "#18233A",
     role: "Insets, table header rows, collapsed rail",
     utilities: "bg-muted, bg-secondary, bg-accent",
   },
   {
     token: "--border",
     hex: "#E2E8F0",
+    hexDark: "#263248",
     role: "All borders, 1px, no exceptions",
     utilities: "border-border, border-input",
   },
   {
     token: "--text",
     hex: "#0A1128",
-    role: "Primary text (midnight navy)",
+    hexDark: "#E7ECF5",
+    role: "Primary text (midnight navy / frost)",
     utilities: "text-foreground",
   },
   {
     token: "--text-2",
     hex: "#3E4C66",
+    hexDark: "#AEBACE",
     role: "Secondary text",
     utilities: "text-foreground-2",
   },
   {
     token: "--text-3",
     hex: "#64748B",
+    hexDark: "#7E8CA6",
     role: "Muted / labels / timestamps (slate)",
     utilities: "text-muted-foreground",
   },
   {
     token: "--accent",
     hex: "#0891B2",
-    role: "Cyan. Interactive states ONLY — focus rings, active nav, primary buttons, links. ≤5% of any viewport.",
+    hexDark: "#22D3EE",
+    role: "Cyan. Interactive states ONLY — focus rings, active nav, primary buttons, links. ≤5% of any viewport, in both skins.",
     utilities: "bg-primary, text-primary, outline-ring",
   },
   {
     token: "--pass",
     hex: "#16A34A",
+    hexDark: "#22C55E",
     role: "Pass / success / score ≥4",
     utilities: "text-pass, tint-pass",
   },
   {
     token: "--warn",
     hex: "#D97706",
+    hexDark: "#F59E0B",
     role: "Warnings / neutral-outcome toasts / score 3",
     utilities: "text-warn, tint-warn",
   },
   {
     token: "--fail",
     hex: "#DC2626",
-    role: "Miss / errors / destructive / score ≤2",
+    hexDark: "#F87171",
+    role: "Miss / errors / destructive / score ≤2. Dark takes two steps of lift where pass and warn take one — red is the darkest of the three hues, so it needs more to clear the same contrast bar on the badge tint (§4.5).",
     utilities: "text-fail, tint-fail, bg-destructive",
+  },
+  {
+    token: "--scrim",
+    hex: "rgba(10,17,40,0.2)",
+    hexDark: "rgba(0,0,0,0.5)",
+    role: "Modal overlays only (§4.5). Dimming means darker in both skins — this is the one token that is not a solid colour.",
+    utilities: "bg-scrim",
   },
 ]
 
