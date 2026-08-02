@@ -884,21 +884,30 @@ export function CoachPanel() {
           </div>
         ) : null}
 
-        {status.text ? (
-          <p
-            role="status"
-            className={cn(
-              "mt-4 text-body",
-              status.tone === "err"
-                ? "text-fail"
-                : status.tone === "ok"
-                  ? "text-pass"
-                  : "text-foreground-2",
-            )}
-          >
-            {status.text}
-          </p>
-        ) : null}
+        {/* ALWAYS MOUNTED, text conditional — never the region and its message
+            arriving together, which is often announced as nothing at all. Same
+            rule as `<Toast />` and the scraper's status line; this one predates
+            both, and it is the longest blind wait in the app: "Creating upload
+            slot… → Uploading… → Transcribing & scoring… (10–60s)" is the only
+            thing on screen saying the tab has not died. Fixed in Phase 8's
+            four-states sweep.
+
+            `mt-4` moves onto the text for the same reason: an empty region must
+            take no vertical space, or the panel gains 16px of nothing. */}
+        <p
+          role="status"
+          className={cn(
+            "text-body",
+            status.text && "mt-4",
+            status.tone === "err"
+              ? "text-fail"
+              : status.tone === "ok"
+                ? "text-pass"
+                : "text-foreground-2",
+          )}
+        >
+          {status.text}
+        </p>
       </section>
 
       {/* ── Scorecard (§5.2) ────────────────────────────────────────────── */}
@@ -937,26 +946,33 @@ export function CoachPanel() {
             onValueChange={setAttachQuery}
             onSelect={(lead) => void attachToLead(lead)}
           />
-          {attachStatus ? (
-            <p
-              role="status"
-              className={cn(
-                "mt-2 text-label",
-                attachStatus.tone === "err"
-                  ? "text-fail"
-                  : attachStatus.tone === "ok"
-                    ? "text-pass"
-                    : "text-muted-foreground",
-              )}
-            >
-              {attachStatus.text}
-            </p>
-          ) : (
+          {/* The live region is always mounted and only its TEXT is conditional
+              (Phase 8). Swapping between a `role="status"` paragraph and a plain
+              one — which is what this was — changes the element under the
+              announcement as well as the text, and a region that appears with its
+              message is often never announced. The hint is a second, ordinary
+              paragraph rather than the region's empty state, so "Linking…" is not
+              read out as a change to help text. */}
+          <p
+            role="status"
+            className={cn(
+              "text-label",
+              attachStatus && "mt-2",
+              attachStatus?.tone === "err"
+                ? "text-fail"
+                : attachStatus?.tone === "ok"
+                  ? "text-pass"
+                  : "text-muted-foreground",
+            )}
+          >
+            {attachStatus?.text ?? ""}
+          </p>
+          {!attachStatus ? (
             <p className="mt-2 text-label text-muted-foreground">
               Optional. Link this call to a lead to keep it in that lead&rsquo;s
               history.
             </p>
-          )}
+          ) : null}
         </section>
       ) : null}
 
