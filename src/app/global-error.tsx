@@ -5,6 +5,7 @@ import { useEffect } from "react"
 
 import { FaultPanel } from "@/components/fault-panel"
 import { Button } from "@/components/ui/button"
+import { THEME_INIT_SCRIPT } from "@/lib/theme"
 
 import "./globals.css"
 
@@ -16,8 +17,8 @@ import "./globals.css"
 // font again. Nothing above it survives to provide them, the nav included.
 //
 // It should never render. It exists because the alternative when it does is Next's
-// built-in 500 page: no tokens, no type ramp, and the OS colour scheme on an app
-// §4 declares light-only.
+// built-in 500 page: no tokens, no type ramp, and the OS colour scheme instead of
+// the skin the owner chose (§4.5).
 //
 // TWO DELIBERATE DIFFERENCES FROM `error.tsx`:
 //   · The escape hatch is a plain <a>, not next/link. The failure was in the root
@@ -45,8 +46,15 @@ export default function GlobalError({
   }, [error])
 
   return (
-    <html lang="en" className={`${jakarta.variable} h-full`}>
+    // suppressHydrationWarning for the same reason as the root layout: the init
+    // script below may add `.dark` before React hydrates.
+    <html lang="en" className={`${jakarta.variable} h-full`} suppressHydrationWarning>
       <body className="min-h-full">
+        {/* §4.5 — this document REPLACES the root layout, so without its own
+            copy of the init script the worst screen in the app would also be the
+            only one that ignores the owner's skin and flashes white. There is no
+            nav here either, so this screen cannot toggle — it only obeys. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <title>Error · Cold Call Coach</title>
         {/* No shell, so this provides its own measure and gutters — the same
             1152px / 16px / 32px the Container gives every other screen. */}

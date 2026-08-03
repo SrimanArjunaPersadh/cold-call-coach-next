@@ -21,12 +21,23 @@ const buttonVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-border aria-expanded:bg-border",
         ghost: "text-foreground hover:bg-muted aria-expanded:bg-muted",
-        destructive: "bg-destructive text-white hover:bg-destructive/90",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         default: "h-11 gap-2 px-4",
-        lg: "h-12 gap-2 px-8 text-body",
+        // NO type utility here, and it is load-bearing. `cn` runs tailwind-merge,
+        // which does not know §4.2's scale and reads `text-body` as a text COLOUR.
+        // cva emits size after variant, so `text-body` won that conflict and
+        // STRIPPED `text-primary-foreground` — leaving the Record button (the
+        // only `lg` in the app) inheriting --text. Navy-on-cyan in light, which
+        // hid it; frost-on-cyan at 1.52:1 in dark, which does not. The size never
+        // rendered at 15px either — `text-sm` from the base outranked it in the
+        // stylesheet — so dropping it changes nothing on screen and gives the
+        // colour back. The general fix is teaching tailwind-merge the scale; that
+        // resizes inputs 16px→15px app-wide and is logged in §12, not done here.
+        lg: "h-12 gap-2 px-8",
         icon: "size-11",
       },
     },

@@ -52,12 +52,14 @@ export default function StyleguidePage() {
     <Container className="flex flex-col gap-8 pb-16">
       <header>
         <p className="eyebrow">Phase 0 acceptance test</p>
-        <h1 className="mt-2 text-title">Styleguide — Light Terminal</h1>
+        <h1 className="mt-2 text-title">Styleguide — the Terminal, both skins</h1>
         <p className="mt-2 max-w-prose text-body text-foreground-2">
           Every token in §4 of the migration plan, rendered from the live CSS
-          variables. Swatches show the computed colour; the hex beside each one is
-          the value §4 specifies. If a swatch and its hex disagree, globals.css has
-          drifted from the plan.
+          variables. Swatches show the computed colour; the hexes beside each one
+          are the values §4.1 (light) and §4.5 (dark) specify. If a swatch and
+          the hex for the skin you are on disagree, globals.css has drifted from
+          the plan. Flip the nav toggle and re-read this page — that flip IS the
+          dark-skin acceptance test.
         </p>
       </header>
 
@@ -69,7 +71,8 @@ export default function StyleguidePage() {
               <tr className="bg-muted text-left">
                 <th className="eyebrow p-2 font-medium">Swatch</th>
                 <th className="eyebrow p-2 font-medium">Token</th>
-                <th className="eyebrow p-2 font-medium">Hex</th>
+                <th className="eyebrow p-2 font-medium">Light</th>
+                <th className="eyebrow p-2 font-medium">Dark</th>
                 <th className="eyebrow p-2 font-medium">Role</th>
                 <th className="eyebrow p-2 font-medium">Utilities</th>
               </tr>
@@ -86,6 +89,9 @@ export default function StyleguidePage() {
                   </td>
                   <td className="p-2 font-mono text-label">{t.token}</td>
                   <td className="p-2 font-mono text-label uppercase">{t.hex}</td>
+                  <td className="p-2 font-mono text-label uppercase">
+                    {t.hexDark}
+                  </td>
                   <td className="max-w-xs p-2 text-foreground-2">{t.role}</td>
                   <td className="p-2 font-mono text-label text-muted-foreground">
                     {t.utilities}
@@ -95,6 +101,27 @@ export default function StyleguidePage() {
             </tbody>
           </table>
         </div>
+      </Section>
+
+      {/* ---------------------------------------------------------------- §4.5 */}
+      <Section title="Dark skin — same tokens, different values" reference="§4.5">
+        <p className="max-w-prose text-body text-foreground-2">
+          The nav toggle puts <code className="font-mono text-label">.dark</code>{" "}
+          on <code className="font-mono text-label">&lt;html&gt;</code> and every
+          token on this page re-resolves — components never know which skin they
+          are in, which is what makes a dark-only or light-only screen
+          impossible. Light is the default; the choice is remembered per browser
+          and re-applied before first paint, and the app never follows the
+          system&rsquo;s colour scheme. Four things change beyond the palette
+          column above, and each is §4.5&rsquo;s ruling, not drift: primary
+          buttons flip to navy-on-cyan text (contrast), the modal scrim darkens
+          instead of fogging (<code className="font-mono text-label">--scrim</code>
+          ), the one shadow takes its dark value, and native form controls follow{" "}
+          <code className="font-mono text-label">color-scheme</code>. The cyan
+          audit at the bottom of this page must pass in both skins — dark ground
+          plus glowing cyan is the Neural Core anti-reference, so if anything,
+          dark earns LESS cyan, never more.
+        </p>
       </Section>
 
       {/* ---------------------------------------------------------------- §4.2 */}
@@ -284,7 +311,7 @@ export default function StyleguidePage() {
               Floating surface — modal, popover, drag ghost
             </div>
             <span className="font-mono text-label text-muted-foreground">
-              0 4px 20px -2px rgba(10,17,40,0.05)
+              0 4px 20px -2px · rgba(10,17,40,0.05) light · rgba(0,0,0,0.5) dark
             </span>
           </div>
         </div>
@@ -368,9 +395,10 @@ export default function StyleguidePage() {
           Inputs take the 8px radius (§4.3 groups them with cards and modals, not
           buttons) and are 44px tall. The Unlock modal is the only floating
           surface Phase 3 ships: the page dims behind it with{" "}
-          <code className="font-mono text-label">--text</code> at 20%, and the
-          panel is the one shadow. Shown flattened here — the live one is fixed
-          over the viewport.
+          <code className="font-mono text-label">--scrim</code> (§4.5 — it was{" "}
+          <code className="font-mono text-label">--text</code> at 20%, which
+          inverts into white fog on the dark skin), and the panel is the one
+          shadow. Shown flattened here — the live one is fixed over the viewport.
         </p>
         <p className="mt-4 max-w-prose text-body text-foreground-2">
           §4.3&rsquo;s modal rules, added 2026-07-30, are structural and cannot be
@@ -394,7 +422,7 @@ export default function StyleguidePage() {
               That passphrase was rejected. Try again.
             </p>
           </div>
-          <div className="flex items-center justify-center rounded-lg bg-foreground/20 p-8">
+          <div className="flex items-center justify-center rounded-lg bg-scrim p-8">
             <div className="w-full rounded-lg border border-border bg-card p-8 shadow-md">
               <p className="text-section">Unlock</p>
               <p className="mt-2 text-body text-foreground-2">

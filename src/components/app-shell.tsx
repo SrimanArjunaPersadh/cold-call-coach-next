@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { SiteNav } from "@/components/site-nav"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 /** Page width and gutters. Gutters are 16px / 32px — on the §4.3 spacing scale. */
 export function Container({
@@ -39,7 +40,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             Cold Call Coach
           </Link>
-          <SiteNav />
+          {/* gap-2 (8px, on scale) between the nav and the theme toggle; the
+              nav's own -mb-px underline trick is unaffected because the wrapper
+              is baseline-neutral. Still fits an iPhone SE with the wordmark
+              hidden: three nav items ≈230px + 44px toggle < 375. */}
+          <div className="flex items-center gap-2">
+            <SiteNav />
+            <ThemeToggle />
+          </div>
         </Container>
       </header>
 
