@@ -779,25 +779,37 @@ stays live throughout. Do not start a phase until the previous one is merged.
 - [ ] **Phase 2 — Metrics engine + first tests.** `computeMetrics` as pure typed
       function + Vitest suite per §6. **Verify:** tests green; function output
       for the surviving 69s call matches the old app's stored metrics exactly.
-- [ ] **Phase 3 — Coach loop.** Record → upload → analyze → scorecard (§5.2
+- [x] **Phase 3 — Coach loop.** Record → upload → analyze → scorecard (§5.2
       layout) → speaker swap → debounced persist. **Verify:** one real 30s+
       recording end-to-end on the phone; swap recomputes all three metrics and
       persists; four states (mic denied = error state).
-- [ ] **Phase 4 — CRM kanban.** Six stage columns (§7 as amended), drag-drop +
+      *Merged 2026-07-29 as PR #3 (`5d3bed1`). **Gate run on the owner's device
+      2026-08-03** — reported working end-to-end, in the same sweep that cleared
+      Phases 4, 5 and 8b.*
+- [x] **Phase 4 — CRM kanban.** Six stage columns (§7 as amended), drag-drop +
       autoscroll, lead modal. **Verify:** phone drag with autoscroll;
       airplane-mode drag rolls back + toasts; empty column state.
-      *Merged 2026-07-29 as PR #4 (`89e27ba`). The phone verification above was
-      NOT run before merge — it remains outstanding, alongside Phase 3's.*
-- [ ] **Phase 5 — Linking & history.** Call↔lead linking UI, per-lead history
+      *Merged 2026-07-29 as PR #4 (`89e27ba`). The phone verification was not run
+      before merge; it **ran 2026-08-03** and the board works.*
+      **One finding, and it is a viewport fact rather than a bug.** A phone in
+      portrait shows **one column and a sliver of the next**; landscape shows
+      three. Six columns at §7's card width simply do not fit a phone, and no
+      amount of drag polish changes that. Logged in §12 rather than fixed,
+      because the owner works on a laptop and the honest fix is the collapsible
+      column already sitting in that table — adding a second, narrower phone
+      layout would be a second board to keep in sync for a screen this app is
+      not primarily used on.
+- [x] **Phase 5 — Linking & history.** Call↔lead linking UI, per-lead history
       (same scorecard component as Coach), metrics strip, call delete with
       AlertDialog. **Verify:** link → history renders identically to Coach
       panel; delete removes row + Storage object; retry-safety test (bad bucket
       env → 500, row survives).
       *Merged 2026-07-30 straight into `main` (`694ea86`), fast-forward, no PR.
-      The verification above was NOT run before merge — it is outstanding,
-      alongside Phase 3's and Phase 4's. Three phases now carry unrun phone
-      gates; §8's four-states sweep is the last place they can be cleared
-      before the Phase 9 cutover.*
+      The verification was not run before merge; it **ran 2026-08-03** and the
+      owner reported it working. The checklist it ran against put the trap below
+      — a fresh recording compared against the lead history, not the 15 July row
+      — as the step, which is the only version of this gate that proves
+      anything.*
       **The trap in this phase's verification, recorded so it is not forgotten:**
       the only call with real stored metrics is the 15 July row, and it was
       written by the OLD app. Phase 5's history renders that row correctly even
@@ -845,11 +857,26 @@ stays live throughout. Do not start a phase until the previous one is merged.
       **Verify:** with <5 scored calls the gate message renders; counts match
       SQL run by hand.
       *Merged 2026-07-31 into `main` (`f124d97`), fast-forward, no PR.*
-      **The box is unticked because the Verify line has not run on the owner's
-      device** — neither the gate message below 5 scored calls nor the hygiene
-      counts against hand-run SQL. Phases 3, 4 and 5 stay unticked for their own
-      reasons and this phase does not clear them; §8's four-states sweep remains
-      the last place all four can be cleared before the Phase 9 cutover.
+      **The box stays unticked on HALF a gate, 2026-08-03.** The gate message
+      ran and is correct — with 3 scored calls the dashboard prints "Your floor
+      unlocks at 5 scored calls · you have 3" and "Trend unlocks at 5 scored
+      calls · you have 3", which is `SCORED_GATE` holding BOTH the trend and the
+      weakest dimension exactly as §0's ruling says it should. **The hygiene
+      counts have still not been checked against hand-run SQL**, and that is the
+      half that can actually be wrong: the gate message is one comparison, the
+      hygiene counts are two different definitions over two tables. It ticks when
+      that SQL runs.
+      **The owner asked the right question at the same time, and the answer is
+      already in the code: dragging a card DOES move the "quiet 7+ days" count,
+      with no call involved.** `PATCH /api/leads` stamps `updated_at` on every
+      write and a kanban drag is a write, so a stage move resets the lead's quiet
+      clock. "Never called" is unaffected — it asks only whether a call row
+      carries the lead's id. This is the old app's behaviour in the same two
+      places and §3 KEEPs these counts as "behaviour identical", so it was not
+      quietly changed; the reasoning and the argument for narrowing "activity" to
+      content-only edits sit on `hygieneCounts` in `lib/dashboard.ts`. Worth
+      knowing before the SQL check above, since a board tidy-up between running
+      the SQL and loading the dashboard will make the two disagree honestly.
       **One deliberate divergence from §8, and it is a decision rather than a
       gap.** §8 says the hygiene counts tap through to a filtered kanban. **They
       do not tap through**, because §12 defers the kanban-side filter: a link
@@ -895,9 +922,35 @@ stays live throughout. Do not start a phase until the previous one is merged.
       `next build`.
 - [ ] **Phase 8 — Four-states sweep & polish.** Audit every surface against
       §4.4; fix gaps; full phone pass.
-- [ ] **Phase 8b — Dark mode.** Owner-requested addition, 2026-08-02, on branch
+      *Merged 2026-08-02 as PR #5 (`bbde089`), **squashed** — the landing that
+      produced §10.1's ③c variant and its `git branch -d` catch. This entry was
+      written 2026-08-03, a day late: the phase landed and the next one started
+      without §11 recording it at all, which is the exact failure ⑤ exists to
+      prevent and is worth seeing once.*
+      **What it produced.** §13 — the four-states matrix, moved into this
+      document because §4.4 had always pointed at a `STATUS.md` living in the OLD
+      repo, the one Phase 9 archives. A migration cannot be graded against a
+      checklist inside the deployment being switched off. Plus the three
+      route-level states that did not exist before it (`app/error.tsx`,
+      `app/global-error.tsx`, `app/not-found.tsx`) and two live-region fixes in
+      `coach-panel`; all five are described in §13 rather than repeated here.
+      **The finding worth carrying into Phase 9**, in §13's words: a four-states
+      audit that only walks components will pass an app whose ROUTES have no
+      states at all. Six phases of component work never surfaced it because every
+      one of them was inside a component.
+      **The box is unticked because "full phone pass" has not happened as one
+      pass.** The 2026-08-03 sweep cleared Phases 3, 4, 5 and 8b on the owner's
+      device and half of Phase 7, which covers the happy paths of most §13 rows —
+      but the sweep §4.4 actually asks for is the FAILURE column: airplane-mode
+      on the board, a rejected passphrase, a bad URL, a validation error that
+      keeps your typing. Those are what this phase built and they remain unwalked
+      end-to-end. It ticks after that walk, which is also the natural rehearsal
+      for Phase 9's one-complete-workflow gate.
+- [x] **Phase 8b — Dark mode.** Owner-requested addition, 2026-08-02, on branch
       `phase-8b-dark-mode` (§1, §3 and §4 amended the same day; §4.5 is the
-      spec). `.dark` token block in `globals.css`; nav toggle (sun/moon, ≥44px,
+      spec). *Merged 2026-08-02 as PR #6 (`9ab02a8`). **Gate run on the owner's
+      device 2026-08-03** — reported working, including the address-bar tint that
+      is the only part of this phase a laptop cannot show you.* `.dark` token block in `globals.css`; nav toggle (sun/moon, ≥44px,
       ghost variant); no-flash inline script as `<body>`'s first child;
       `theme-color` meta follows the skin by reading `--surface` off the live
       styles, never a hex in a component; `--scrim` token replaces the
@@ -929,6 +982,10 @@ stays live throughout. Do not start a phase until the previous one is merged.
       dark; reload — the choice holds with no white flash; phone — browser
       chrome tint follows the skin; airplane-mode-style storage check is not
       needed (blocked storage degrades to per-tab toggle, §13 note).
+      Static checks re-run on `9ab02a8` 2026-08-03: **236 Vitest tests**, `tsc`,
+      `eslint`. `next build` was NOT re-run — it rewrites `.next` and leaves the
+      dev server 404ing real routes until the directory is deleted, which is a
+      worse trade than an unverified build on a commit that already passed ② once.
 - [ ] **Phase 9 — Cutover.** Side-by-side week: same Supabase, both apps live.
       Then: point primary usage at the new app; old app archived (repo kept,
       deployment paused) only after one full week of real use with zero
@@ -946,6 +1003,7 @@ stays live throughout. Do not start a phase until the previous one is merged.
 | Kanban stale-indicators + never-called sort/filter | If the dashboard hygiene tile proves insufficient in use |
 | Collapsible kanban columns (the §7 rail, reversed) | If the stage list ever grows past what a viewport fits. The pattern is real — Trello, Jira and Linear all collapse a column to a vertical strip — it was simply the wrong trade at six columns on a full-width board. Re-add as a per-column toggle the owner controls, remembered across visits, NOT hardcoded to one stage. |
 | Google Places Autocomplete for the scraper's location field (§3 amendment, 2026-07-30) | If the calling ever leaves KwaZulu-Natal, or a hand-typed area wastes a real Apify run twice. Costs a `GOOGLE_PLACES_KEY`, a §9 route and per-keystroke billing; the hardcoded `SA_LOCATIONS` list is the standing answer until then. |
+| **Kanban on a phone in portrait** (Phase 4's gate, 2026-08-03) | Six columns at §7's card width fit a laptop, not a phone: portrait shows one column and a sliver, landscape three. Horizontal scrolling to reach `won` is a lot of thumb. Deferred, not broken — the owner works on a laptop and the drag, autoscroll and drop targets all verified fine. **The fix is the collapsible column already in this table, not a second phone-only layout**; a parallel board is two boards to keep in sync forever, for the screen this app is used on least. Revisit if the phone ever becomes the primary surface for triage rather than for recording. |
 | CSV import re-add | If a real lead list ever arrives from outside Google Maps (bought list, GHL export, collaborator's spreadsheet) |
 | Funnel visualisation re-add | ~50+ leads flowing through stages |
 | **Teach `tailwind-merge` §4.2's type scale** (Phase 8b's finding, 2026-08-02) | `cn` runs `twMerge`, which does not know `text-stat/title/section/subhead/body/label` are font sizes and classifies them as text COLOURS. Wherever a component writes `text-body` before a colour class — input, textarea, select, card, and the three dialog descriptions — the *font size* is silently dropped and the element inherits 16px instead of §4.2's 15px. Phase 8b fixed only the one case where the casualty was the colour instead (the `lg` button; see §11). The general fix is `extendTailwindMerge` registering the scale as `font-size`. **It is deferred because it drops every input from 16px to 15px, and under 16px iOS Safari zooms the page on focus** — a phone-first tool cannot take that change without a real phone pass. Revisit with one. |
