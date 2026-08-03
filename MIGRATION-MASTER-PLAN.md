@@ -747,8 +747,12 @@ git commit -m "docs: record Phase N merged, gates run/unrun"
 git push
 ```
 
-**Housekeeping.** `phase-1-api` and `phase-2-metrics` are still on this machine
-long after merging. Delete a merged local branch with `git branch -d <name>` —
+**Housekeeping.** As of 2026-08-03 this machine is clean — `git branch -vv`
+prints `main` alone, so the `phase-1-api` and `phase-2-metrics` strays this
+paragraph was written about have since been deleted. The rule stays, because the
+strays come back: `--delete-branch` in ③b/③c removes only the REMOTE branch, and
+the local one survives every landing. Delete a merged local branch with
+`git branch -d <name>` —
 lowercase `-d` refuses if it is not merged, which is the check you want. **That
 check only works after ③ or ③b.** After a squash (③c) it refuses on branches that
 ARE merged, and the diff-then-`-D` sequence in ③c is the replacement. Know which
