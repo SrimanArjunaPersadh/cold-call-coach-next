@@ -474,15 +474,21 @@ export default function StyleguidePage() {
       </Section>
 
       {/* ---------------------------------------------------------- §7 */}
-      <Section title="Kanban — card and column" reference="§7 · §4.4">
+      <Section title="Kanban — card, column, select mode" reference="§7 · §4.4 · §3">
         <p className="max-w-prose text-body text-foreground-2">
-          The Phase 4 treatments. §7 fixes the card at four things — business
-          name, phone, maps rating, website link — so the extras the old card
-          carried (a Maps link, a &ldquo;No website&rdquo; flag, an industry
-          chip, a notes flag, a Call button) are gone. All six stages are full
-          columns; see the amendment note below. Nothing here is cyan: a drop
-          target is state, not interaction — the same ruling that keeps the
-          recorder&rsquo;s indicator grey.
+          The Phase 4 treatments, and Phase 8c&rsquo;s three below them. §7 fixes
+          the card at four things — business name, phone, maps rating, website
+          link — so the extras the old card carried (a Maps link, a &ldquo;No
+          website&rdquo; flag, an industry chip, a notes flag, a Call button) are
+          gone. All six stages are full columns; see the amendment note below.
+        </p>
+        <p className="mt-4 max-w-prose text-body text-foreground-2">
+          One thing here is cyan and one thing only: the ticked box of a selected
+          card. A drop target is not — it is state, not interaction, the same
+          ruling that keeps the recorder&rsquo;s indicator grey — and neither is
+          the selection bar. Selecting a card IS direct interaction, which is
+          what §4.1 reserves the accent for; the audit for it is in the select
+          mode block, on live ticks rather than a static mock.
         </p>
         <div className="mt-4">
           <BoardDemo />

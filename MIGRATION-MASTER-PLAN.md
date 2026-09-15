@@ -23,9 +23,14 @@ Either can be reversed with a one-line instruction before its build phase starts
    honest empty state: `Trend unlocks at 5 scored calls · you have {n}`. At ≥5,
    the line renders. Rationale: a line through 3 points is noise; at 5+ it is the
    point of a coaching tool.
-2. **CSV import: CUT for this migration.** Not translated. Google Maps scraper
+2. ~~**CSV import: CUT for this migration.** Not translated. Google Maps scraper
    remains the sole lead-acquisition path. Logged in §12 as deferred re-add if a
-   real external lead list ever materialises.
+   real external lead list ever materialises.~~ **REVERSED 2026-09-15 by the
+   owner**, which is what this section says either ruling is for. §12's trigger
+   fired — a real lead list arrived from outside Google Maps. Built as Phase 8c
+   (§11); the terms of the re-add, including what did NOT come back with it, are
+   in §3's third amendment. The struck text stays because the reasoning was
+   correct when it was written, and a reversal is only legible next to it.
 
 ---
 
@@ -113,6 +118,58 @@ Adjudicated 2026-07-29. This table is closed. Nothing may be added to it.
 > are untouched, the dark values live behind §4's existing token names (§4.5),
 > so no screen can drift dark-only or light-only. Built as Phase 8b (§11).
 
+> **AMENDED A THIRD TIME 2026-09-15, before Phase 8c, by the owner.** Three
+> additions, and the first is not really an addition at all — it is §0 ruling 2
+> being exercised. The owner: *"I want to add an import/export feature that
+> allows me to either import or export the lead list that I've created outside
+> of the web app itself"*, and, separately, *"a multi-lead selector… as it
+> stands, I have to delete each one individually, which is time-consuming, very
+> manual, and labor-intensive."*
+>
+> **1 — CSV import: UNCUT.** §0 said either default ruling "can be reversed with
+> a one-line instruction before its build phase starts", and §12's trigger for
+> this one was "if a real lead list ever arrives from outside Google Maps
+> (bought list, GHL export, collaborator's spreadsheet)". One did. The CUT row
+> in the table below stays struck rather than deleted, because the reasoning in
+> it was correct at the time and the record of WHY it was cut is what makes the
+> re-add legible. What came back is the auto-mapper and the mapping UI; what did
+> NOT is the garbage-file guard, and that is a deliberate subtraction — a
+> heuristic deciding a file "is not really a lead list" can refuse a file that is
+> fine, and the preview replaces it without that failure mode. **Excel is not
+> read.** `.xlsx` is a ZIP of XML and reading it costs either a ~400KB
+> dependency or a hand-rolled inflate; the modal detects a workbook by its magic
+> bytes and says `File → Save As → CSV UTF-8`. That is the Google Places ruling
+> applied again — see §12 for the trigger to revisit.
+>
+> **2 — CSV export: NEW, and the only genuinely invented thing in this phase.**
+> Nothing in this document anticipated it. Three things bound it: it writes the
+> IMPORTER'S OWN column keys, so export → edit in Excel → import round-trips and
+> there is no second schema to keep in step; it carries **no `id`** (an export is
+> a lead list, not a backup — ids would invite a re-import to mean "update these
+> rows", which is a sync feature nobody asked for); and **no email column**, same
+> as everything else here. It is a client-side `Blob` off the rows already in
+> state, so it adds no route and cannot fail on the network.
+>
+> **3 — Multi-select + bulk delete: NEW.** A MODE, not a permanent control, and
+> that is the whole of its bounding. §7 closed the card face at four things, so a
+> checkbox on every card forever — to serve an action taken about once a month —
+> was rejected, as was long-press, which competes directly with the 5px drag
+> threshold. In select mode the card is a checkbox, the drag is off, and the
+> stage count in each header becomes select-all-in-this-column. Bulk delete is
+> `?ids=` on the EXISTING `DELETE /api/leads`, not a sixth route: same verb, same
+> resource, same `user_id` clamp, and it mirrors POST, which has taken
+> `{ leads: [...] }` alongside a single lead since Phase 1. **§9's table still
+> has exactly five rows.**
+>
+> One thing the owner did not ask for and got anyway, recorded so it is not
+> mistaken for drift: **the bulk-insert branch of `POST /api/leads` now dedupes**,
+> by exactly the rule `/api/scrape` has used since Phase 6 (moved to
+> `lib/lead-dedupe.ts`, unchanged, and tested for the first time). The old app's
+> importer did not dedupe because when it was written the scraper did not exist.
+> Today the spreadsheet being imported is very likely to overlap last week's
+> scrape of the same suburb, and two acquisition paths with two opinions about
+> what a duplicate is means the same number gets called twice.
+
 ### KEEP (translate as-is, behaviour identical)
 | Feature | Notes |
 |---|---|
@@ -141,7 +198,7 @@ Adjudicated 2026-07-29. This table is closed. Nothing may be added to it.
 | Funnel visualisation | Conversion rates need volume; at 6 leads every segment is an anecdote the owner knows by name. Cheap to cut, cheap to re-add later inside component architecture, expensive only to keep. |
 | Week-over-week delta | Percentage deltas on single-digit denominators are noise wearing a suit. Raw weekly count survives inside `4 / 25` (§8). |
 | Average overall score | A manager's number. The practitioner's numbers are the last call and the weakest dimension. |
-| CSV import (incl. garbage-file guard, auto-mapper, mapping UI) | Struck 2026-07-29. Scraper is the real acquisition path; CSV was disproportionately complex to translate for a rarely-used surface. Deferred, not deleted from history — see §12. |
+| ~~CSV import (incl. garbage-file guard, auto-mapper, mapping UI)~~ | ~~Struck 2026-07-29. Scraper is the real acquisition path; CSV was disproportionately complex to translate for a rarely-used surface. Deferred, not deleted from history — see §12.~~ **UNCUT 2026-09-15** — §0 ruling 2 reversed, built as Phase 8c. The auto-mapper and mapping UI came back; the garbage-file guard did not. See the third amendment above. |
 
 ### NEVER BUILD (ruled out permanently for this product)
 - AI roleplay / training mode, or anything resembling it.
@@ -765,7 +822,7 @@ way the phase landed before you delete its branch.
 One phase = one branch = one fresh session = independently verifiable. Old app
 stays live throughout. Do not start a phase until the previous one is merged.
 
-- [ ] **Phase 0 — New repo, scaffold & tokens.** Create a new GitHub repo
+- [x] **Phase 0 — New repo, scaffold & tokens.** Create a new GitHub repo
       (e.g. `cold-call-coach-next`) and a new Vercel project pointed at it —
       the old repo and its `main` are untouched. Same Supabase project, same
       env vars re-added in the new Vercel project. `create-next-app` (TS
@@ -776,13 +833,88 @@ stays live throughout. Do not start a phase until the previous one is merged.
       (Coach · Leads · Dashboard — horizontal, left-to-right). Env vars into
       Vercel. **Verify:** styleguide matches §4 on laptop + phone; cyan audit
       passes.
-- [ ] **Phase 1 — API translation.** All Route Handlers per §9 against the SAME
+      *Ticked 2026-08-03, on Phase 8b's gate rather than its own.* This phase
+      predates the ticking convention Phase 6 set, so the box was never marked
+      either way. **8b's gate is a strict superset of this one**: it puts
+      `/styleguide` on the owner's phone and requires every swatch to match its
+      printed hex and the cyan audit to pass — in BOTH skins, where this asked
+      for one. A separate re-run would be the same screen, twice, with fewer
+      checks.
+      **One thing this box does NOT cover, so it is not mistaken for covered:**
+      §12's light-skin contrast row. The light palette's badge tints measure
+      2.86–4.14:1 and its primary button 3.68:1, under WCAG AA. That is a §4.1
+      question, not a cyan-audit one — the cyan audit asks how MUCH cyan there
+      is, not whether the colours are legible against their backgrounds. It stays
+      deferred with its own trigger.
+- [x] **Phase 1 — API translation.** All Route Handlers per §9 against the SAME
       Supabase project. **Verify:** curl each route with/without `x-app-secret`
       (fail-closed), diff GET responses against the old app's byte-for-byte on
       the real data.
-- [ ] **Phase 2 — Metrics engine + first tests.** `computeMetrics` as pure typed
+      **Gate run 2026-08-03 against the live deployment**
+      (`cold-call-coach-next.vercel.app`), nine curls, all nine as expected:
+      `/api/leads` and `/api/calls` return **401 with no header, 401 with a wrong
+      key, 200 with the real one**; `/api/create-upload`, `/api/analyze` and
+      `/api/scrape` return **401 to an unauthenticated POST**, dying at the gate
+      rather than parsing a body first; and **`PUT /api/leads` with no header
+      returns 401, not 405** — the unsupported-method tail refuses for lack of a
+      key before admitting which methods exist. Confirms in production what the
+      code review below could only assert about the source: the deployed
+      `APP_SECRET` is set and matches, so the app is neither open nor dead.
+      **Of the three unmarked early phases, this was the one that had genuinely
+      never run.** Phases 0 and 2 were merely unmarked.
+      **There are no route tests at all** — all 13 Vitest files live in `lib/`,
+      none in `app/api/`, so nothing anywhere exercises a handler end to end.
+      What IS verified, statically, by reading every handler on this branch:
+      `requireSecret(req)` is the first statement of all sixteen exported
+      handlers across the five routes, **including every `405 + Allow` tail** —
+      so an unauthenticated OPTIONS or PUT cannot learn which methods a route
+      supports. `lib/api/auth.ts` fails closed on a missing `APP_SECRET` (503,
+      not "serve open"), compares with `timingSafeEqual` behind a length check,
+      and logs neither the secret nor the provided value. That satisfies §10's
+      pre-merge "requireSecret line one" — it does not satisfy this Verify line,
+      which asks what the deployment actually returns.
+      **The box is ticked on ONE of this line's two halves, deliberately.**
+      - *The fail-closed curls* — **ran, above.** The security-critical half, and
+        the only one reading the source cannot answer, since no amount of code
+        review tells you which env vars Vercel actually holds.
+      - *The byte-for-byte GET diff against the old app* — **retired unrun, and
+        should not be restored.** It existed to catch field-shape drift before
+        any UI depended on it. Since then Phases 3–7 have driven every one of
+        these routes with real data through the real UI, and Phase 5's
+        fresh-recording gate is strictly stronger than a diff: it proves a row
+        written by the NEW stack reads back correctly, which comparing OLD rows
+        never could. Recorded rather than deleted so a future session does not
+        "restore" a verification step that was dropped on purpose.
+      **The gap this phase leaves behind, named so Phase 9 can decide about it:
+      there are no route tests.** All 13 Vitest files live in `lib/`, none in
+      `app/api/` — nothing in the suite exercises a handler end to end. The curls
+      above are a snapshot of one deployment on one day, not a fence like Phase
+      2's golden fixture: nothing fails if a future edit moves `requireSecret`
+      below a body parse. What holds the line today is §10's pre-merge checklist
+      and the fact that `requireSecret(req)` is the first statement of all
+      sixteen exported handlers across the five routes, every `405 + Allow` tail
+      included, with `lib/api/auth.ts` failing closed on a missing `APP_SECRET`
+      (503, never open), comparing with `timingSafeEqual` behind a length check,
+      and logging neither value. That is a convention, held by review. It is not
+      a test.
+- [x] **Phase 2 — Metrics engine + first tests.** `computeMetrics` as pure typed
       function + Vitest suite per §6. **Verify:** tests green; function output
       for the surviving 69s call matches the old app's stored metrics exactly.
+      *Merged as `8d4e9f2` via PR #2. **Ticked 2026-08-03 after confirming the
+      gate is not just run but PERMANENT.***
+      Both halves are machine-checked on every commit, which makes this the one
+      phase whose gate cannot silently rot:
+      - *Tests green* — 236 passing on `9ab02a8`, re-run 2026-08-03.
+      - *The 69s call* — `src/lib/__fixtures__/golden-call.ts` holds row
+        `6c9e53d4…938e4f` verbatim, with `GOLDEN_STORED_METRICS` being what the
+        OLD app computed and persisted for that transcript. `metrics.test.ts`
+        asserts `computeMetrics(GOLDEN_TRANSCRIPT, GOLDEN_REP_SPEAKER)` equals it
+        exactly. The fixture's own header carries the rule that matters: **do not
+        regenerate it from the new code** — the moment it is regenerated it stops
+        being the old app's answer and starts being a mirror.
+      This is the shape every other gate wishes it had, and worth naming for
+      Phase 9: a phone gate proves the app worked once, on one device, on one
+      day. This one proves it still works, on every commit, forever.
 - [x] **Phase 3 — Coach loop.** Record → upload → analyze → scorecard (§5.2
       layout) → speaker swap → debounced persist. **Verify:** one real 30s+
       recording end-to-end on the phone; swap recomputes all three metrics and
@@ -834,6 +966,10 @@ stays live throughout. Do not start a phase until the previous one is merged.
       that reason and **this phase does not clear them** — their gates are still
       outstanding, and §8's four-states sweep is the last place to clear them
       before the Phase 9 cutover.
+      *(Written 2026-07-30. Those three cleared on 2026-08-03, in a sweep that
+      also took Phase 7 and 8b — see their entries. The paragraph stands as
+      written because the convention it set is the point, and it held: the sweep
+      happened because four boxes were sitting there unticked, saying so.)*
       **Three things landed with this phase that its Verify line never mentioned,
       because the owner asked for them mid-phase.** Recorded so the scope is
       honest rather than tidy:
@@ -856,20 +992,42 @@ stays live throughout. Do not start a phase until the previous one is merged.
       columns still bordered and headed, exactly one scrollbar on the page).
       Static checks that passed on `d8a739e`: 164 Vitest tests, `tsc`, `eslint`,
       `next build`.
-- [ ] **Phase 7 — Dashboard.** §8 exactly: 4/25 hero, last-call hero + weakest
+- [x] **Phase 7 — Dashboard.** §8 exactly: 4/25 hero, last-call hero + weakest
       dimension, gated trend, hygiene tile with filtered kanban tap-throughs.
       **Verify:** with <5 scored calls the gate message renders; counts match
       SQL run by hand.
       *Merged 2026-07-31 into `main` (`f124d97`), fast-forward, no PR.*
-      **The box stays unticked on HALF a gate, 2026-08-03.** The gate message
-      ran and is correct — with 3 scored calls the dashboard prints "Your floor
-      unlocks at 5 scored calls · you have 3" and "Trend unlocks at 5 scored
-      calls · you have 3", which is `SCORED_GATE` holding BOTH the trend and the
-      weakest dimension exactly as §0's ruling says it should. **The hygiene
-      counts have still not been checked against hand-run SQL**, and that is the
-      half that can actually be wrong: the gate message is one comparison, the
-      hygiene counts are two different definitions over two tables. It ticks when
-      that SQL runs.
+      **Gate run in two halves, both on 2026-08-03.** The gate message first:
+      with 3 scored calls the dashboard prints "Your floor unlocks at 5 scored
+      calls · you have 3" and "Trend unlocks at 5 scored calls · you have 3" —
+      `SCORED_GATE` holding BOTH the trend and the weakest dimension, which is
+      §0's ruling as adjudicated this phase rather than two separate thresholds.
+      Then the SQL: the owner ran the four queries by hand against Supabase and
+      **reported the counts matching**. That is the half that could actually have
+      been wrong — the gate message is one comparison, the hygiene counts are two
+      different definitions joined across two tables.
+      **The queries, kept because the next person to doubt a count should not
+      have to re-derive them.** All four clamp to `user_id = 'solo'`
+      (`DEFAULT_USER_ID`, `lib/api/supabase.ts`) and all four mirror a decision
+      in `lib/dashboard.ts` rather than the plain-English tile copy:
+      - *Calls this week* — `status is distinct from 'error'` (not `<> 'error'`,
+        which is NULL for a NULL status and drops rows the app counts), and
+        `created_at at time zone 'Africa/Johannesburg' >= date_trunc('week', now()
+        at time zone 'Africa/Johannesburg')`. **The timezone conversion is the
+        whole trick**: `startOfWeek` is local by construction, so in SAST the
+        week starts 22:00 Sunday UTC and a naive UTC query disagrees with the
+        screen for two hours every Sunday night.
+      - *Scored calls* — `jsonb_typeof(rubric_scores->'dimensions') = 'array'`
+        AND `jsonb_typeof(rubric_scores->'overall_score') = 'number'`, which is
+        `scoredCalls`' two deviations from the old app's `isScored` written in
+        SQL: a null overall is not a zero.
+      - *Never called* — `not exists` against `calls`, **no status filter**.
+      - *Quiet 7+ days* — `greatest(max(call.created_at), coalesce(l.updated_at,
+        l.created_at)) <= now() - interval '7 days'`, also no status filter.
+      **The asymmetry in those last two is real and inherited**: an errored call
+      still marks a lead "called", while the weekly count excludes it. Do not
+      make the SQL tidier than the app — a query that filters status on the
+      hygiene counts will disagree with a correct dashboard.
       **The owner asked the right question at the same time, and the answer is
       already in the code: dragging a card DOES move the "quiet 7+ days" count,
       with no call involved.** `PATCH /api/leads` stamps `updated_at` on every
@@ -878,9 +1036,10 @@ stays live throughout. Do not start a phase until the previous one is merged.
       carries the lead's id. This is the old app's behaviour in the same two
       places and §3 KEEPs these counts as "behaviour identical", so it was not
       quietly changed; the reasoning and the argument for narrowing "activity" to
-      content-only edits sit on `hygieneCounts` in `lib/dashboard.ts`. Worth
-      knowing before the SQL check above, since a board tidy-up between running
-      the SQL and loading the dashboard will make the two disagree honestly.
+      content-only edits sit on `hygieneCounts` in `lib/dashboard.ts`. **It is
+      also the one way to make the SQL check above disagree with a correct
+      dashboard**: tidy the board between running the queries and loading the
+      page and the quiet count legitimately drops. Re-run, do not debug.
       **One deliberate divergence from §8, and it is a decision rather than a
       gap.** §8 says the hygiene counts tap through to a filtered kanban. **They
       do not tap through**, because §12 defers the kanban-side filter: a link
@@ -943,8 +1102,8 @@ stays live throughout. Do not start a phase until the previous one is merged.
       states at all. Six phases of component work never surfaced it because every
       one of them was inside a component.
       **The box is unticked because "full phone pass" has not happened as one
-      pass.** The 2026-08-03 sweep cleared Phases 3, 4, 5 and 8b on the owner's
-      device and half of Phase 7, which covers the happy paths of most §13 rows —
+      pass.** The 2026-08-03 sweep cleared Phases 3, 4, 5, 7 and 8b on the
+      owner's device, which covers the happy paths of most §13 rows —
       but the sweep §4.4 actually asks for is the FAILURE column: airplane-mode
       on the board, a rejected passphrase, a bad URL, a validation error that
       keeps your typing. Those are what this phase built and they remain unwalked
@@ -990,6 +1149,62 @@ stays live throughout. Do not start a phase until the previous one is merged.
       `eslint`. `next build` was NOT re-run — it rewrites `.next` and leaves the
       dev server 404ing real routes until the directory is deleted, which is a
       worse trade than an unverified build on a commit that already passed ② once.
+- [ ] **Phase 8c — The lead list as a list: import, export, select.**
+      Owner-requested addition, 2026-09-15, on branch `phase-8c-lead-io` (§0's
+      ruling 2 reversed and §3 amended a third time the same day; §3's third
+      amendment is the spec). **Built as ONE phase on one branch deliberately**:
+      export-selected is a selection feature and a file feature at once, so
+      splitting them would have landed an Export button whose "selected" mode
+      did not exist yet.
+      **What it produced.** Three pure libs with tests —
+      `lib/delimited.ts` (a hand-written RFC 4180 reader/writer, no dependency),
+      `lib/lead-io.ts` (the field list, the auto-mapper, the stage aliases, the
+      export columns and the outcome copy) and `lib/lead-dedupe.ts` (Phase 6's
+      rule, MOVED out of `api/scrape/route.ts` unchanged and tested for the
+      first time). Plus `import-modal.tsx`, select mode in `leads-board.tsx` and
+      `lead-card.tsx`, and the three new treatments on `/styleguide`.
+      **Two server changes, and neither adds a route (§9 still has five).**
+      `POST /api/leads`' bulk branch — translated in Phase 1, then unreachable
+      for seven phases because §3 had cut its UI — now dedupes and reports
+      `duplicates` apart from `skipped`, because those mean different things to
+      the person reading the toast. `DELETE /api/leads` takes `?ids=` alongside
+      `?id=`, capped at 500, each id refused unless it matches
+      `^[A-Za-z0-9_-]{1,64}$` before it reaches a PostgREST `in.(…)` list. The
+      single-id `{ ok: true }` response is untouched — `lead-modal.tsx` has read
+      it since Phase 4.
+      **One old behaviour was corrected rather than translated, and it is worth
+      seeing.** The bulk branch answered a batch it could insert nothing from
+      with `400 "No valid leads to import (each row needs a name)"`. With dedupe
+      in front of it, the commonest way to reach that line is now a file whose
+      every row is ALREADY on the board — a completely correct import — and a
+      400 turns it into an error that is both wrong and alarming. It returns 200
+      with the counts; the neutral-amber toast (`imported === 0` → `--warn`,
+      exactly `scrapeOutcome`'s ruling) is what reports it.
+      **Three decisions that will look like omissions later.**
+      - **No Excel.** `.xlsx` is a ZIP of XML. The modal detects a workbook by
+        its magic bytes — so a `.xlsx` renamed `.csv` is still caught — and says
+        `File → Save As → CSV UTF-8`. §12 has the trigger.
+      - **No garbage-file guard**, which §3 had listed as part of what was cut.
+        The preview is the guard: it shows exactly what will land, and unlike a
+        heuristic it cannot refuse a file that is fine.
+      - **Bulk delete is not optimistic**, unlike a drag. A failed move rolls
+        back to a slot that still exists; a failed delete has nothing to roll
+        back TO. The board waits, the button says "Deleting…", and the rows leave
+        only when the server says they are gone — and it removes exactly the ids
+        the server names, not the ids the client asked about.
+      **On `/styleguide` before shipping, per AGENTS.md**: select mode, the
+      selection bar and the import preview table all went up (§7 · §4.4 · §3).
+      The select-mode demo is LIVE rather than static, so the cyan audit is done
+      on a real number of ticked boxes — a ticked box is the one cyan thing
+      there, at ~0.8% of a laptop viewport, and the section's copy says why
+      selection is interaction where a drop target is state.
+      **Verify:** see the session's hand-over. Static checks passed locally:
+      **328 Vitest tests** (236 → 328; 92 of them new), `tsc`, `eslint`,
+      `next build` — five routes, unchanged. **The phone gate has NOT been run.**
+      The box ticks after import, export, select-all-in-a-column and a bulk
+      delete have each been walked on the owner's device, including the failure
+      column: a workbook dropped on the modal, an import interrupted mid-file,
+      and a bulk delete in airplane mode.
 - [ ] **Phase 9 — Cutover.** Side-by-side week: same Supabase, both apps live.
       Then: point primary usage at the new app; old app archived (repo kept,
       deployment paused) only after one full week of real use with zero
@@ -1008,7 +1223,10 @@ stays live throughout. Do not start a phase until the previous one is merged.
 | Collapsible kanban columns (the §7 rail, reversed) | If the stage list ever grows past what a viewport fits. The pattern is real — Trello, Jira and Linear all collapse a column to a vertical strip — it was simply the wrong trade at six columns on a full-width board. Re-add as a per-column toggle the owner controls, remembered across visits, NOT hardcoded to one stage. |
 | Google Places Autocomplete for the scraper's location field (§3 amendment, 2026-07-30) | If the calling ever leaves KwaZulu-Natal, or a hand-typed area wastes a real Apify run twice. Costs a `GOOGLE_PLACES_KEY`, a §9 route and per-keystroke billing; the hardcoded `SA_LOCATIONS` list is the standing answer until then. |
 | **Kanban on a phone in portrait** (Phase 4's gate, 2026-08-03) | Six columns at §7's card width fit a laptop, not a phone: portrait shows one column and a sliver, landscape three. Horizontal scrolling to reach `won` is a lot of thumb. Deferred, not broken — the owner works on a laptop and the drag, autoscroll and drop targets all verified fine. **The fix is the collapsible column already in this table, not a second phone-only layout**; a parallel board is two boards to keep in sync forever, for the screen this app is used on least. Revisit if the phone ever becomes the primary surface for triage rather than for recording. |
-| CSV import re-add | If a real lead list ever arrives from outside Google Maps (bought list, GHL export, collaborator's spreadsheet) |
+| ~~CSV import re-add~~ | ~~If a real lead list ever arrives from outside Google Maps (bought list, GHL export, collaborator's spreadsheet)~~ **FIRED 2026-09-15.** One did. §0 ruling 2 reversed, built as Phase 8c. |
+| **Reading `.xlsx` directly** (Phase 8c's ruling, 2026-09-15) | If `File → Save As → CSV UTF-8` becomes a step the owner resents, or a file arrives that Excel cannot export cleanly (multi-sheet workbooks, merged cells). Costs either SheetJS at ~400KB on the client or a hand-rolled ZIP inflate over `DecompressionStream`; the second is real and about 200 lines, and the sane trigger for it is the first time a conversion actually loses data rather than merely costs three clicks. Until then the modal detects a workbook by its magic bytes and names the three clicks. |
+| **Undo for a bulk delete** (Phase 8c, 2026-09-15) | If a bulk delete is ever regretted. Today the guard is the AlertDialog carrying the COUNT in its title plus the Export button one row above it, which is a real backup and takes one tap. A true undo means either a soft-delete column (a schema change, which §2 forbids in this migration) or holding the deleted rows in memory and re-POSTing them, which would give them new ids and silently break every call already linked to them. Both are worse than the confirm until the confirm actually fails someone. |
+| **Import mapping remembered between files** (Phase 8c, 2026-09-15) | If the same supplier's spreadsheet is imported more than about three times and the same three dropdowns get re-pointed every time. It is `localStorage` keyed on the header row, which is cheap — but it is also a preference this app has no surface for (§3's dark-mode amendment: "it is one control in the nav, not a settings screen"), and a remembered mapping that is silently wrong for a NEW file is worse than pointing two dropdowns. |
 | Funnel visualisation re-add | ~50+ leads flowing through stages |
 | **Teach `tailwind-merge` §4.2's type scale** (Phase 8b's finding, 2026-08-02) | `cn` runs `twMerge`, which does not know `text-stat/title/section/subhead/body/label` are font sizes and classifies them as text COLOURS. Wherever a component writes `text-body` before a colour class — input, textarea, select, card, and the three dialog descriptions — the *font size* is silently dropped and the element inherits 16px instead of §4.2's 15px. Phase 8b fixed only the one case where the casualty was the colour instead (the `lg` button; see §11). The general fix is `extendTailwindMerge` registering the scale as `font-size`. **It is deferred because it drops every input from 16px to 15px, and under 16px iOS Safari zooms the page on focus** — a phone-first tool cannot take that change without a real phone pass. Revisit with one. |
 | **Light-skin contrast pass** (§4.5's finding, 2026-08-02) | The light palette's badge tints measure 2.86–4.14:1 and its primary button 3.68:1, all under WCAG AA's 4.5. Phase 8b measured this while choosing dark values and left light alone — fixing it reopens §4.1, which is its own decision with its own on-screen review. Revisit if the app is ever read on a phone in sunlight and a score badge is the thing that cannot be read, or if anyone but the owner uses it. |
@@ -1044,13 +1262,26 @@ Claude Code cannot reach that server. A row's file reference is where to look.
 | Delete call `lead-calls` | — | AlertDialog + "Deleting…" — **closes the old app's ⚠ no-text gap** | toast; row's dialog stays open, button live, row survives | "Call deleted" toast, list re-reads |
 | Find leads (Apify) `scrape-modal` | zero-outcome **amber** toast, never green | live-dot panel: query being run + elapsed clock, not a greyed form | distinct copy per `code`: `no_token`, `timeout`, generic | toast "N added, M duplicates skipped…" |
 | Dashboard `dashboard-view` | per-tile: "No calls logged this week yet." · "No call scored yet." · "No dimension scores available yet." · "No leads yet." · §0's trend gate | per-tile skeleton bars in `--surface-2` | per-tile `Failed` + "Try again" — **never a silent zero**, since 0 and "could not load" look identical | §8's three groups: 4/25, last-call hero + floor + trend, hygiene counts |
+| Import `import-modal` | drop zone: "Drop a .csv here, or choose one."; after a load with nothing mappable, the preview says which two dropdowns fix it | live-dot panel: `Importing  n / total`, plus the batch note above 500 | a workbook → the `File → Save As → CSV UTF-8` line; a headerless file, an empty file and an unreadable file each get their own; a mid-file failure reports what DID land, then the error | mapping list, 3-row preview, `n to import · m skipped` and the outcome toast |
+| Select mode `leads-board` · `lead-card` | bar reads "Tap cards to select them."; Export selected and Delete both dead at zero | — (the mode is instant; the board's own loading state disables Select) | bulk delete failure toasts and the AlertDialog **stays open with the button live** — the retry is where you already are | `n selected`, per-column select-all on the stage count, Export selected, Delete |
+| Export `leads-board` | Export is dead with an empty board; in select mode, dead until something is ticked | — (no request; it is the rows already in state) | no failure path exists, which is the point of not asking the server for what the client has | "n leads exported" toast, file on the disk |
 | Unlock `secret-modal` | modal on first API call | — | "That passphrase was rejected. Try again." | stored in `sessionStorage`, request retried once |
 | Route error `app/error.tsx` | — | — | §4-styled panel, Try again (`unstable_retry`) + Go to Coach; message and digest to the console, never to the screen | — |
 | Global error `app/global-error.tsx` | — | — | same panel, own `<html>`/`<body>`/font; escape is a plain `<a>`, since client routing is what broke | — |
 | 404 `app/not-found.tsx` | — | — | "That page doesn't exist." + the three real destinations | — |
 
-**No ⚠ rows.** The old app carried three; two are closed above and the third was
-CSV import, which §3 CUT. Nothing in this app ships happy-path-only.
+**No ⚠ rows.** The old app carried three; two were closed in Phase 8 and the
+third was CSV import, which §3 CUT — and which came BACK in Phase 8c (§0's
+ruling 2, reversed 2026-09-15). It returns with four states rather than the ⚠ it
+left with, and its Error column is the widest on this table, because a file
+somebody else made is the one input to this app that nobody here controls.
+Nothing in this app ships happy-path-only.
+
+**One row is deliberately thin: Export.** It has no loading state and no error
+state, and that is a property of the design rather than a gap — it serialises
+rows the client already has, so there is no request to be pending on and nothing
+to fail. The alternative (an `/api/leads/export` route) would have invented both
+states in order to have something to render.
 
 **One row does not exist, deliberately: the theme toggle (Phase 8b).** It is a
 control, not a data surface — it has nothing to load, nothing to be empty of,

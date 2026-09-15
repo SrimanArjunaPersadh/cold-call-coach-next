@@ -11,6 +11,19 @@
 // rows have to land, so that is all it owns of that feature — the form, the
 // status line and the outcome toast are `<ScrapeModal />`.
 //
+// Phase 8c added three, on the same principle — the toolbar and the rows live
+// here, the surfaces do not. Import is `<ImportModal />` and merges exactly like
+// a scrape. Export is eight lines, because a CSV of the rows already in state
+// needs no route and no round trip. Select mode is the only one that reaches
+// into the board proper: it is a MODE, and while it is on, the card is a
+// checkbox and the drag is off.
+//
+// WHY A MODE AND NOT A PERMANENT CHECKBOX. §7 closed the card face at four
+// things, and a tick box on every card forever — to serve an action taken about
+// once a month — is the fifth. A long-press was the other candidate and is the
+// worse one: it competes directly with DRAG_THRESHOLD below, since a press that
+// is about to become a drag is the same gesture for the first 500ms.
+//
 // §7 AMENDED 2026-07-29: `not_interested` was specified as a collapsed
 // count-chip rail. It is a full column now — see the note on STAGES in
 // lib/board.ts. The rail's machinery was deleted, not disabled.
@@ -32,12 +45,24 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
+import { ImportModal } from "@/components/import-modal"
 import { CardSkeleton, LeadCard } from "@/components/lead-card"
 import { LeadModal } from "@/components/lead-modal"
 import { ScrapeModal } from "@/components/scrape-modal"
 import { SecretModal } from "@/components/secret-modal"
 import { Toast, useToast } from "@/components/toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
 import {
   dropIndex,
   groupByStage,
@@ -48,6 +73,7 @@ import {
   type Lead,
 } from "@/lib/board"
 import { errorText, leadsApi } from "@/lib/leads-api"
+import { exportFilename, toLeadCsv } from "@/lib/lead-io"
 import { leadsCache } from "@/lib/leads-cache"
 import { takeOpenLead } from "@/lib/open-lead"
 import { cn } from "@/lib/utils"
@@ -72,6 +98,20 @@ export function LeadsBoard() {
   const [modalLead, setModalLead] = useState<Lead | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [scrapeOpen, setScrapeOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+
+  /**
+   * Select mode, and what is selected in it. A Set because the only questions
+   * asked of it are "is this one in" and "how many", both per render, per card.
+   *
+   * The two are separate state: leaving select mode CLEARS the selection, but
+   * the clear is explicit (in `exitSelect`) rather than derived, so that a
+   * future "selected in another mode" cannot silently inherit it.
+   */
+  const [selectMode, setSelectMode] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   /** The card being dragged (null = no drag). Drives `.dragging` on the card. */
   const [dragId, setDragId] = useState<string | null>(null)
@@ -207,6 +247,26 @@ export function LeadsBoard() {
     if (!loading && !error) leadsCache.publish(leads)
   }, [leads, loading, error])
 
+  /**
+   * Prune the selection to what is actually on the board.
+   *
+   * A Refresh, a scrape or an import replaces `leads` wholesale, and a lead
+   * deleted on the phone an hour ago comes back gone. Without this the bar
+   * would count ids that render nothing — "12 selected" over eleven ticked
+   * cards, and a Delete that reports a number the owner cannot account for.
+   *
+   * Returning `prev` unchanged when nothing was pruned matters: a new Set every
+   * time `leads` changes would re-render every card in the board on every load.
+   */
+  useEffect(() => {
+    setSelected((prev) => {
+      if (!prev.size) return prev
+      const live = new Set(leads.map((l) => String(l.id)))
+      const next = new Set([...prev].filter((id) => live.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [leads])
+
   // ── Move: optimistic, then PATCH, then roll back if it failed ───────────
 
   const persistMove = useCallback(
@@ -339,6 +399,10 @@ export function LeadsBoard() {
 
   const onPointerDown = useCallback(
     (event: React.PointerEvent) => {
+      // Select mode owns the card's press. Returning here rather than
+      // suppressing the drag later is what keeps the two gestures from ever
+      // being in flight at once — no threshold to tune, no race to lose.
+      if (selectMode) return
       if (event.pointerType === "mouse" && event.button !== 0) return // left only
       const target = event.target as HTMLElement | null
       if (!target) return
@@ -444,7 +508,7 @@ export function LeadsBoard() {
       document.addEventListener("pointerup", up)
       document.addEventListener("pointercancel", up)
     },
-    [commitMove, detachListeners, updateAutoscroll],
+    [commitMove, detachListeners, selectMode, updateAutoscroll],
   )
 
   // Tear the drag down if the board unmounts mid-gesture.
@@ -477,19 +541,61 @@ export function LeadsBoard() {
 
   // ── Click → edit ────────────────────────────────────────────────────────
 
-  const onBoardClick = useCallback((event: React.MouseEvent) => {
-    if (suppressClick.current) return
-    const card = (event.target as HTMLElement | null)?.closest(
-      "[data-lead-card]",
-    ) as HTMLElement | null
-    if (!card) return
-    const lead = leadsRef.current.find(
-      (l) => String(l.id) === String(card.dataset.id),
-    )
-    if (!lead) return
-    setModalLead(lead)
-    setModalOpen(true)
+  /** Add or remove one id. The only way selection ever changes by one. */
+  const toggleOne = useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }, [])
+
+  const onBoardClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (suppressClick.current) return
+      const card = (event.target as HTMLElement | null)?.closest(
+        "[data-lead-card]",
+      ) as HTMLElement | null
+      if (!card) return
+      const id = card.dataset.id
+      if (!id) return
+
+      // In select mode a tap toggles and NEVER opens the editor. That is the
+      // whole bargain of the mode: one meaning per tap, so there is nothing to
+      // mis-hit and no modal to dismiss between selecting two cards.
+      if (selectMode) {
+        toggleOne(id)
+        return
+      }
+
+      const lead = leadsRef.current.find((l) => String(l.id) === String(id))
+      if (!lead) return
+      setModalLead(lead)
+      setModalOpen(true)
+    },
+    [selectMode, toggleOne],
+  )
+
+  /**
+   * Space and Enter on a focused card, because the card carries
+   * `role="checkbox"` in select mode and a checkbox that only answers to a
+   * mouse is a checkbox in name only. Space is also the browser's scroll key,
+   * so it is prevented — on a card, in this mode, only.
+   */
+  const onBoardKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (!selectMode) return
+      if (event.key !== " " && event.key !== "Enter") return
+      const card = (event.target as HTMLElement | null)?.closest(
+        "[data-lead-card]",
+      ) as HTMLElement | null
+      if (!card?.dataset.id) return
+      event.preventDefault()
+      toggleOne(card.dataset.id)
+    },
+    [selectMode, toggleOne],
+  )
 
   // ── Render ──────────────────────────────────────────────────────────────
 
@@ -512,6 +618,121 @@ export function LeadsBoard() {
     return [...others.slice(0, at), dragged, ...others.slice(at)]
   }
 
+  // ── Select mode: the actions ────────────────────────────────────────────
+
+  /** Leaving the mode clears the selection — see the state comment above. */
+  const exitSelect = useCallback(() => {
+    setSelectMode(false)
+    setSelected(new Set())
+  }, [])
+
+  /** Every lead on the board, or none. The count in the bar says which it is. */
+  const toggleAll = () => {
+    setSelected((prev) =>
+      prev.size === leads.length
+        ? new Set()
+        : new Set(leads.map((l) => String(l.id))),
+    )
+  }
+
+  /**
+   * Every lead in one stage, or none of them.
+   *
+   * This is the workflow the whole mode exists for: `Not interested` fills up
+   * over months and clearing it is one tap here and one confirm, instead of
+   * forty taps and forty confirms.
+   */
+  const toggleStage = (stageKey: string) => {
+    const ids = (groups[stageKey] ?? []).map((l) => String(l.id))
+    if (!ids.length) return
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (ids.every((id) => next.has(id))) for (const id of ids) next.delete(id)
+      else for (const id of ids) next.add(id)
+      return next
+    })
+  }
+
+  // ── Export ──────────────────────────────────────────────────────────────
+
+  /**
+   * The rows already in state → a file on the disk. No route, no round trip:
+   * `leads` IS what the board is showing, and asking the server to re-serialise
+   * what the client already has would be a request that can fail for no gain.
+   *
+   * In select mode it exports the SELECTION, which is the only reason the
+   * button lives in both places — "export just these twelve" is otherwise a
+   * spreadsheet edit after the fact.
+   *
+   * The object URL is revoked on the next frame rather than immediately: Safari
+   * has not finished reading it when `click()` returns, and revoking early is
+   * the difference between a file and a silent nothing.
+   */
+  const exportLeads = () => {
+    const rows = selectMode
+      ? leads.filter((l) => selected.has(String(l.id)))
+      : leads
+    if (!rows.length) {
+      toast("Nothing to export.", "warn")
+      return
+    }
+    // The BOM is for Excel, which reads a UTF-8 file as the system codepage
+    // without it — and this app's leads are full of names that prove it.
+    const blob = new Blob(["﻿" + toLeadCsv(rows)], {
+      type: "text/csv;charset=utf-8",
+    })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement("a")
+    anchor.href = url
+    anchor.download = exportFilename()
+    anchor.click()
+    requestAnimationFrame(() => URL.revokeObjectURL(url))
+    toast(`${rows.length} lead${rows.length === 1 ? "" : "s"} exported`, "ok")
+  }
+
+  // ── Bulk delete ─────────────────────────────────────────────────────────
+
+  /**
+   * One request, not N. See the DELETE handler's comment: 200 round trips on a
+   * phone is 200 chances to fail into a state no toast can describe honestly.
+   *
+   * NOT optimistic, unlike a drag. A move that fails rolls back to a slot that
+   * still exists; a delete that fails has nothing to roll back TO, and painting
+   * the cards gone before the server agrees would mean restoring rows from
+   * memory and hoping they match. The board waits, the button says "Deleting…",
+   * and the rows leave when they are actually gone.
+   */
+  const deleteSelected = async () => {
+    const ids = Array.from(selected)
+    if (!ids.length) return
+    setBulkDeleting(true)
+    try {
+      const data = await leadsApi<{ deleted?: number; ids?: string[] }>(
+        `/api/leads?ids=${ids.map(encodeURIComponent).join(",")}`,
+        { method: "DELETE" },
+        "Delete failed",
+      )
+      // Remove exactly what the SERVER says it deleted. A row it declined to
+      // delete — someone else's, or already gone — must not vanish from the
+      // board on this client's say-so.
+      const gone = new Set(data.ids ?? ids)
+      setLeads((prev) => prev.filter((l) => !gone.has(String(l.id))))
+      const deleted = Number(data.deleted) || 0
+      setConfirmOpen(false)
+      exitSelect()
+      toast(
+        `${deleted} lead${deleted === 1 ? "" : "s"} deleted`,
+        deleted ? "ok" : "warn",
+      )
+    } catch (err) {
+      // The dialog stays OPEN with the button live, exactly as the lead modal's
+      // delete does (§4.4): the retry is where you already are.
+      toast(errorText(err, "Could not delete leads"), "err")
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
   const openAdd = () => {
     setModalLead(null)
     setModalOpen(true)
@@ -529,9 +750,22 @@ export function LeadsBoard() {
 
   const onDeleted = (id: string) => {
     setLeads((prev) => prev.filter((l) => String(l.id) !== String(id)))
+    // A selection may not outlive its rows. Deleting a selected lead from the
+    // modal would otherwise leave its id in the Set, and the bar would offer to
+    // delete a card that is not on the board — a count that means nothing.
+    setSelected((prev) => {
+      if (!prev.has(String(id))) return prev
+      const next = new Set(prev)
+      next.delete(String(id))
+      return next
+    })
   }
 
   /**
+   * Rows that a bulk insert just created — a scrape (Phase 6) or an import
+   * (Phase 8c). One handler for both, because both routes answer the same way:
+   * `return=representation`, the inserted rows, in insert order.
+   *
    * Scraped rows land at the end of the list (Phase 6), and `groupByStage` puts
    * them in `new` ordered by the `Date.now()`-based positions the route wrote —
    * so they arrive at the bottom of the New column, newest last. That is the old
@@ -542,7 +776,7 @@ export function LeadsBoard() {
    * phone. The `leadsCache` publish effect above picks them up, so Coach's
    * attach-combobox can offer a lead scraped a moment ago.
    */
-  const onScraped = (rows: Lead[]) => {
+  const mergeInserted = (rows: Lead[]) => {
     if (!rows.length) return
     setLeads((prev) => {
       // Merged by id, not appended. The route only ever returns rows it just
@@ -577,26 +811,64 @@ export function LeadsBoard() {
             {loading ? "·" : leads.length}
           </span>
         </div>
-        <div className="flex flex-wrap gap-4">
-          {/* All three controls refetch or mutate the board. Live during a
-              fetch, each one's success handler would race the in-flight GET —
-              which was issued before the insert and would land last, dropping
-              it. Order and emphasis are the old toolbar's: Refresh, Find leads,
-              then the one primary. (Import CSV sat between them there; §3 CUT
-              it.) Find leads is `outline`, not primary — two cyan buttons side
-              by side make the reader pick which one the screen is about, and at
-              ≤5% of the viewport (§4.1) there is room for exactly one.
+        {/* Two groups, one hairline between them. LIST actions on the left —
+            everything that operates on the leads you already have — and
+            ACQUISITION on the right, the two ways a lead arrives. Six controls
+            in one undifferentiated row is the noisy screen §1.1 warns about;
+            the separator is what makes it parse in two glances instead of six.
 
-              The two MUTATING controls are also dead while the board is in its
-              error state (added 2026-07-30). The error branch below replaces the
-              columns with the message, so a lead added or scraped from there
-              really does land in Postgres and really is invisible: the toast
-              says "5 added" over a board that cannot show them, which reads as a
-              broken scraper rather than a failed load. Refresh stays live — it
-              is the retry. */}
+            All of them refetch or mutate the board. Live during a fetch, each
+            one's success handler would race the in-flight GET — which was
+            issued before the insert and would land last, dropping it. Order and
+            emphasis are the old toolbar's: Refresh, then Import where the old
+            app had it, then Find leads, then the one primary.
+
+            The MUTATING controls are also dead while the board is in its error
+            state (added 2026-07-30). The error branch below replaces the
+            columns with the message, so a lead added, imported or scraped from
+            there really does land in Postgres and really is invisible: the toast
+            says "5 added" over a board that cannot show them, which reads as a
+            broken importer rather than a failed load. Refresh stays live — it is
+            the retry. Export goes dead with them, for a different reason: a
+            board that failed to load has nothing in `leads` to write, so the
+            file would be a header row and a lie.
+
+            Find leads is `outline`, not primary — two cyan buttons side by side
+            make the reader pick which one the screen is about, and at ≤5% of the
+            viewport (§4.1) there is room for exactly one. */}
+        <div className="flex flex-wrap items-center gap-4">
           <Button variant="outline" onClick={() => void loadLeads()} disabled={loading}>
             Refresh
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => setImportOpen(true)}
+            disabled={loading || !!error}
+          >
+            Import
+          </Button>
+          <Button
+            variant="outline"
+            onClick={exportLeads}
+            disabled={loading || !!error || !leads.length}
+          >
+            Export
+          </Button>
+          {/* A toggle, so it says what it does next and reports what is on now.
+              `aria-pressed` because that is what a toggle button is; the label
+              changes too, since a control whose only state is an ARIA attribute
+              is a control only some people can read. */}
+          <Button
+            variant="outline"
+            aria-pressed={selectMode}
+            onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
+            disabled={loading || !!error || !leads.length}
+          >
+            {selectMode ? "Done" : "Select"}
+          </Button>
+
+          <Separator orientation="vertical" className="hidden h-8 sm:block" />
+
           <Button
             variant="outline"
             onClick={() => setScrapeOpen(true)}
@@ -610,6 +882,53 @@ export function LeadsBoard() {
         </div>
       </header>
 
+      {/* ── The selection bar (§4.4's empty state included) ────────────────
+          INLINE, under the header, not floating. A floating bar would sit on
+          top of `<Toast />`, which is fixed to the same corner and is where the
+          result of every action here is reported — the one thing that must not
+          be covered by the thing that caused it. The board is a fixed-height
+          pane, so a row taken here is a row the board gives back; nothing
+          overlaps and nothing is pushed off screen.
+
+          No cyan: this is a report with controls in it, and the one interaction
+          accent on this screen is already spent on Add lead (§4.1). Delete is
+          `destructive`, which is semantic, not decorative. */}
+      {selectMode ? (
+        <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-muted px-4 py-2">
+          <p role="status" aria-live="polite" className="text-body">
+            {selected.size ? (
+              <>
+                <span data-numeric className="font-medium">
+                  {selected.size}
+                </span>{" "}
+                selected
+              </>
+            ) : (
+              "Tap cards to select them."
+            )}
+          </p>
+          <div className="flex flex-wrap items-center gap-4">
+            <Button variant="ghost" onClick={toggleAll}>
+              {selected.size === leads.length ? "Clear all" : "Select all"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={exportLeads}
+              disabled={!selected.size}
+            >
+              Export selected
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => setConfirmOpen(true)}
+              disabled={!selected.size}
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {error ? (
         <p className="rounded-lg border border-border bg-card p-8 text-body text-fail">
           {error}
@@ -622,13 +941,24 @@ export function LeadsBoard() {
           // below its content height and the pane grows past the viewport.
           className="flex min-h-0 flex-1 flex-col"
           onPointerDown={onPointerDown}
+          onKeyDown={onBoardKeyDown}
           // Capture phase: the website chip's click is stopped before the
           // delegated click-to-edit handler below ever sees it, so the link
           // navigates without also opening the editor.
+          //
+          // SELECT MODE INVERTS THIS, and it has to. The chip is a real link
+          // sitting inside what is now a checkbox, so the Phase 4 rule would
+          // mean one corner of every card silently navigates away instead of
+          // ticking — leaving the board, losing the selection, and looking
+          // exactly like a tap that missed. In select mode the navigation is
+          // prevented and the click is allowed THROUGH to the toggle: while the
+          // mode is on, every part of the card means the same thing.
           onClickCapture={(e) => {
-            if ((e.target as HTMLElement | null)?.closest("[data-chip-link]")) {
-              e.stopPropagation()
+            if (!(e.target as HTMLElement | null)?.closest("[data-chip-link]")) {
+              return
             }
+            if (selectMode) e.preventDefault()
+            else e.stopPropagation()
           }}
           onClick={onBoardClick}
         >
@@ -718,12 +1048,36 @@ export function LeadsBoard() {
                         card ever becomes a positioned element. */}
                     <header className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-t-lg border-b border-border bg-muted px-2 py-2">
                       <h2 className="eyebrow truncate">{stage.label}</h2>
-                      <span
-                        data-numeric
-                        className="text-label text-muted-foreground"
-                      >
-                        {loading ? "·" : items.length}
-                      </span>
+                      {/* In select mode the count becomes a button that takes
+                          the whole column. This is the workflow the mode exists
+                          for — `Not interested` fills up over months, and
+                          clearing it should be one tap and one confirm, not
+                          forty of each. It replaces the count rather than
+                          sitting beside it, so the header gains no width: at
+                          ~174px (§7's second amendment) there is none to give.
+
+                          NOT a drop target problem: the header is the column's
+                          drop zone during a drag, and a drag cannot happen in
+                          select mode, so the two never contend. */}
+                      {selectMode && !loading ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleStage(stage.key)}
+                          disabled={!items.length}
+                          aria-label={`Select all in ${stage.label}`}
+                          data-numeric
+                          className="rounded-sm px-1 text-label text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:no-underline disabled:opacity-50"
+                        >
+                          {items.length}
+                        </button>
+                      ) : (
+                        <span
+                          data-numeric
+                          className="text-label text-muted-foreground"
+                        >
+                          {loading ? "·" : items.length}
+                        </span>
+                      )}
                     </header>
                     <div
                       className={cn(
@@ -744,6 +1098,8 @@ export function LeadsBoard() {
                             key={lead.id}
                             lead={lead}
                             dragging={String(lead.id) === String(dragId)}
+                            selectable={selectMode}
+                            selected={selected.has(String(lead.id))}
                           />
                         ))
                       ) : (
@@ -771,9 +1127,54 @@ export function LeadsBoard() {
       <ScrapeModal
         open={scrapeOpen}
         onOpenChange={setScrapeOpen}
-        onScraped={onScraped}
+        onScraped={mergeInserted}
         toast={toast}
       />
+      <ImportModal
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={mergeInserted}
+        toast={toast}
+      />
+
+      {/* Controlled rather than triggered, because the button that opens it
+          lives in the selection bar and has its own disabled logic. Cancel
+          holds focus, not the destructive action — the alert-dialog's own rule.
+
+          The count is in the TITLE, not only the body: it is the one fact that
+          decides whether this confirm is routine or a catastrophe, and it has
+          to be readable in the half-second before the tap. */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {selected.size} lead{selected.size === 1 ? "" : "s"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This cannot be undone. Any calls linked to these leads are kept —
+              they lose the link, not the recording. Export first if you want a
+              copy.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                // preventDefault so Radix does not close the dialog before the
+                // request lands: the pending state and the failure path both
+                // need it still on screen (§4.4 — the retry is where you are).
+                event.preventDefault()
+                void deleteSelected()
+              }}
+              disabled={bulkDeleting}
+            >
+              {bulkDeleting
+                ? "Deleting…"
+                : `Delete ${selected.size} lead${selected.size === 1 ? "" : "s"}`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Toast message={message} />
       <SecretModal />
     </div>
