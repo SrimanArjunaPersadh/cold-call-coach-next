@@ -6,6 +6,7 @@ import {
   readJson,
 } from "@/lib/api/http"
 import { getUserId, requireEnv, supabaseFetch } from "@/lib/api/supabase"
+import { dedupeKey, dedupeSet, type LeadIdentity } from "@/lib/lead-dedupe"
 
 // Node runtime, not Edge — deliberate, carried over from the old app (§2).
 export const runtime = "nodejs"
@@ -27,35 +28,11 @@ const TIMEOUT_MS = 55000
 
 type LeadRow = Record<string, unknown>
 
-/** The shape dedupeKey needs, from either a scraped place or a stored lead. */
-type Identity = {
-  phone?: unknown
-  name?: unknown
-  business?: unknown
-  address?: unknown
-}
-
-// Phone → digits only, keep the last 9 significant digits so SA numbers written
-// as +27 31…, 031…, or 31… all collapse to the same dedupe key. Empty when the
-// value has no digits at all.
-function normPhone(v: unknown): string {
-  const digits = String(v || "").replace(/\D/g, "")
-  return digits.length > 9 ? digits.slice(-9) : digits
-}
-
-// Loose text key for the no-phone fallback identity.
-function normText(v: unknown): string {
-  return String(v || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
-}
-
-// A lead's dedupe key: normalized phone first; with no phone, fall back to
-// (name || business) + address. Returns "" for a lead with no usable identity.
-function dedupeKey(lead: Identity): string {
-  const phone = normPhone(lead.phone)
-  if (phone) return "p:" + phone
-  const id = normText(lead.name || lead.business) + "|" + normText(lead.address)
-  return id === "|" ? "" : "n:" + id
-}
+// The dedupe rule moved to `lib/lead-dedupe.ts` in Phase 8c, unchanged. It is
+// no longer this route's private business: CSV import is a second way leads
+// arrive, and a second opinion about what counts as a duplicate would mean a
+// spreadsheet that overlaps last week's scrape imports clean and the same
+// number gets called twice. Same rule, one definition, now with tests.
 
 export async function POST(req: Request) {
   const denied = requireSecret(req)
@@ -167,15 +144,11 @@ export async function POST(req: Request) {
     }
 
     // Dedupe against everything already on the board, then within this batch.
-    const existing = await supabaseFetch<Identity[]>(
+    const existing = await supabaseFetch<LeadIdentity[]>(
       `/rest/v1/leads?user_id=eq.${encodeURIComponent(userId)}` +
         `&select=phone,name,business,address`,
     )
-    const seen = new Set<string>()
-    for (const l of existing || []) {
-      const k = dedupeKey(l)
-      if (k) seen.add(k)
-    }
+    const seen = dedupeSet(existing || [])
 
     const now = Date.now()
     const rows: Record<string, unknown>[] = []

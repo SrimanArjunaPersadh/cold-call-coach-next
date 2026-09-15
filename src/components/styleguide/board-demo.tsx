@@ -62,20 +62,37 @@ function Column({
   label,
   count,
   over = false,
+  selectable = false,
+  onSelectAll,
   children,
 }: {
   label: string
   count: string
   over?: boolean
+  /** Select mode: the count becomes the select-all-in-this-column control. */
+  selectable?: boolean
+  onSelectAll?: () => void
   children: React.ReactNode
 }) {
   return (
     <section className="flex w-68 shrink-0 flex-col rounded-lg border border-border bg-card">
       <header className="flex items-center justify-between gap-2 rounded-t-lg border-b border-border bg-muted px-2 py-2">
         <h3 className="eyebrow truncate">{label}</h3>
-        <span data-numeric className="text-label text-muted-foreground">
-          {count}
-        </span>
+        {selectable ? (
+          <button
+            type="button"
+            onClick={onSelectAll}
+            aria-label={`Select all in ${label}`}
+            data-numeric
+            className="rounded-sm px-1 text-label text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {count}
+          </button>
+        ) : (
+          <span data-numeric className="text-label text-muted-foreground">
+            {count}
+          </span>
+        )}
       </header>
       <div
         className={cn(
@@ -92,6 +109,16 @@ function Column({
 export function BoardDemo() {
   const [toastTone, setToastTone] = useState<"ok" | "err">("ok")
   const [deleting, setDeleting] = useState(false)
+  /** Live, so the cyan audit is done on a REAL number of ticked cards. */
+  const [picked, setPicked] = useState<Set<string>>(new Set(["1", "3"]))
+
+  const toggle = (id: string) =>
+    setPicked((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
 
   return (
     <div className="flex flex-col gap-8">
@@ -164,6 +191,125 @@ export function BoardDemo() {
           with their lost stage — the rail was the one place this board asked
           its owner to learn something their existing tools do not do. The
           board&rsquo;s full-bleed width is what pays for the sixth column.
+        </p>
+      </div>
+
+      {/* ── Phase 8c ─────────────────────────────────────────────────── */}
+      <div>
+        <p className="eyebrow mb-2">
+          Select mode (Phase 8c) — the card becomes a checkbox
+        </p>
+        <div className="flex gap-4 overflow-x-auto pb-2">
+          <Column label="New" count="3" selectable onSelectAll={() => {}}>
+            {[FULL, SPARSE, SCRAPED].map((lead) => (
+              <div key={lead.id} onClick={() => toggle(String(lead.id))}>
+                <LeadCard
+                  lead={lead}
+                  selectable
+                  selected={picked.has(String(lead.id))}
+                />
+              </div>
+            ))}
+          </Column>
+          <Column label="Not interested" count="0" selectable onSelectAll={() => {}}>
+            <p className="rounded-lg border border-dashed border-border p-4 text-center text-label text-muted-foreground">
+              Drop leads here
+            </p>
+          </Column>
+        </div>
+        <p className="mt-2 max-w-prose text-body text-foreground-2">
+          Tap the cards above — this demo is live, so the{" "}
+          <strong className="font-semibold">
+            cyan audit is done on a real number of ticked boxes
+          </strong>
+          . A ticked box is the one thing here that <em>is</em> cyan, and
+          deliberately: selecting is direct interaction, unlike a drop target,
+          which is state. A full column of selected cards measures about 0.8% of
+          a laptop viewport — inside §4.1&rsquo;s 5% cap with room to spare. The
+          stage count in the header turns into a button in this mode (it selects
+          the whole column) rather than growing a second control beside it: at
+          ~174px there is no width to give.
+        </p>
+        <p className="mt-2 max-w-prose text-body text-foreground-2">
+          Outside select mode the card is byte-identical to Phase 4&rsquo;s —
+          compare with the first block on this page. §7 closed the card face at
+          four things, and this adds a fifth only while a mode is on. It is also
+          why the drag is off here and{" "}
+          <code className="font-mono text-label">touch-none</code> comes off the
+          card with it: there is no drag to protect, and leaving it on would stop
+          a finger scrolling the column.
+        </p>
+      </div>
+
+      <div>
+        <p className="eyebrow mb-2">Selection bar — inline, never floating</p>
+        <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-muted px-4 py-2">
+          <p className="text-body">
+            <span data-numeric className="font-medium">
+              {picked.size}
+            </span>{" "}
+            selected
+          </p>
+          <div className="flex flex-wrap items-center gap-4">
+            <Button variant="ghost">Select all</Button>
+            <Button variant="outline" disabled={!picked.size}>
+              Export selected
+            </Button>
+            <Button variant="destructive" disabled={!picked.size}>
+              Delete
+            </Button>
+          </div>
+        </div>
+        <p className="mt-2 max-w-prose text-body text-foreground-2">
+          It sits under the toolbar rather than floating over the board, and that
+          is not a preference: the toast is fixed to the bottom of the viewport
+          and reports the result of every action in this bar. A floating bar
+          would cover the answer with the question. Nothing here is cyan —
+          Delete is <code className="font-mono text-label">destructive</code>,
+          which is semantic (§4.1), and this screen&rsquo;s one accent is already
+          spent on Add lead.
+        </p>
+      </div>
+
+      <div>
+        <p className="eyebrow mb-2">
+          Import preview — the only table treatment in the app
+        </p>
+        <div className="max-w-lg overflow-x-auto rounded-lg border border-border">
+          <table className="w-full text-body">
+            <thead>
+              <tr className="border-b border-border bg-muted">
+                <th className="eyebrow px-2 py-2 text-left">Business</th>
+                <th className="eyebrow px-2 py-2 text-left">Phone</th>
+                <th className="eyebrow px-2 py-2 text-left">Stage</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["Kloof Panelbeaters", "031 764 1122", "new"],
+                ["Westville Auto Body", "031 266 9080", "callback"],
+                ["Hillcrest Spray", "072 433 1901", "new"],
+              ].map((row) => (
+                <tr key={row[0]} className="border-b border-border last:border-0">
+                  <td className="max-w-48 truncate px-2 py-2">{row[0]}</td>
+                  <td data-numeric className="px-2 py-2">
+                    {row[1]}
+                  </td>
+                  <td className="px-2 py-2 text-muted-foreground">{row[2]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-2 max-w-prose text-body text-foreground-2">
+          Three rows, because three is enough to see that a mapping is wrong —
+          and seeing that is the whole job. §3 cut the old app&rsquo;s
+          garbage-file guard, and this preview is what replaces it: a heuristic
+          deciding a file &ldquo;is not really a lead list&rdquo; can refuse a
+          file that is fine, and a preview cannot. The header takes the kanban
+          column header&rsquo;s own treatment (
+          <code className="font-mono text-label">bg-muted</code>, one border, an
+          eyebrow), so no new surface enters §4.
         </p>
       </div>
 
